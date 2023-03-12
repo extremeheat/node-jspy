@@ -14,8 +14,13 @@ using PersistentValue = v8::Persistent<v8::Value, v8::CopyablePersistentTraits<v
 
 class JSInterfaceForPython {
  private:
-  std::map<int, PersistentValue> m;  // FFID to v8 persistent value
+  std::map<unsigned int, PersistentValue> m;  // FFID to v8 persistent value
+  // Special cases:
+  // 0 -> internal require function
+  // 1 -> inspect function
+  
   std::shared_ptr<node::CommonEnvironmentSetup> nodeEnv;
+  unsigned int ffidCounter = 0;
 
 public:
   enum class Action {
@@ -52,11 +57,25 @@ public:
     int ffid;
   };
   
-  enum ResultType { Empty, Error };
   std::string lastError;
 
+  enum ResultType {
+    Empty,
+    Error,
+    String,
+    Integer,
+    Float,
+    Boolean,
+    Object
+  };
+
   struct Result {
+    // This should be String, Integer, Float, Boolean, or Object
     ResultType resultType;
+    double floatValue;
+    long long integerOrBooleanValue;
+    int ffid;  // if object
+    std::string stringValue;
   };
 
   JSInterfaceForPython(std::shared_ptr<node::CommonEnvironmentSetup> &nodeEnv)
@@ -94,4 +113,19 @@ public:
   }
 
   Result call(int ffid, std::vector<Argument> arguments, int argsLen);
+
+  Result get(int ffid, std::string attribute);
+
+  Result inspect(int ffid);
+
+  int AddPersistent(v8::Persistent<v8::Value>& fn) {
+    m[++ffidCounter] = fn;
+    return ffidCounter;
+  };
+
+  void SetPersistentGlobalFn(v8::Persistent<v8::Function>& fn, int ffid) {
+    m[ffid] = fn;
+  };
+
+  void loadInspectFunction(v8::Local<v8::Function> &requireFn);
 };

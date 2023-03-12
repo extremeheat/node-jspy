@@ -49,3 +49,9 @@ v8::Maybe<int> SpinJspyLoop(node::CommonEnvironmentSetup* setup,
   env->VerifyNoStrongBaseObjects();
   return EmitProcessExit(env);
 }
+
+
+v8::Local<v8::Function> GetNativeRequireFunction(
+  node::CommonEnvironmentSetup* setup) {
+  return setup->env()->native_module_require();
+}

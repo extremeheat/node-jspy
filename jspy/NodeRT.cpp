@@ -1,4 +1,7 @@
 #include "NodeRT.h"
+#include "NodeSpinner.h"
+#include "PyJSObject.h"
+#include "jspy_spinner.h"  // node
 
 using V8 = v8::V8;
 
@@ -25,17 +28,17 @@ int NodeRT::Init(int argc, char** argv) {
 
   printf("Initialized v8\n");
 
-  for (int i = 0; i < 200; i++) {
-    int ret = InitNodeInstance(platform.get(), args, exec_args);
-    this->sayHello();
-    // Sleep(500);
-    setup = nullptr;
-  }
-
+  //for (int i = 0; i < 200; i++) {
+  //  int ret = InitNodeInstance(platform.get(), args, exec_args);
+  //  this->sayHello();
+  //  // Sleep(500);
+  //  setup = nullptr;
+  //}
+  InitNodeInstance(platform.get(), args, exec_args);
   return 0;
 }
 
-int NodeRT::InitNodeInstance(node::MultiIsolatePlatform* platform,
+bool NodeRT::InitNodeInstance(node::MultiIsolatePlatform* platform,
                      const std::vector<std::string>& args,
                      const std::vector<std::string>& exec_args) {
   std::vector<std::string> errors;
@@ -48,7 +51,23 @@ int NodeRT::InitNodeInstance(node::MultiIsolatePlatform* platform,
     return 1;
   };
   wasInited = true;
-  return 0;
+
+  // Store a reference to the nodejs native require function
+  {
+    v8::Locker locker(setup->isolate());
+    v8::HandleScope handle_scope(setup->isolate());
+    v8::Isolate::Scope isolate_scope(setup->isolate());
+
+    this->jsi = std::make_shared<JSInterfaceForPython>(setup);
+    auto requireFn = GetNativeRequireFunction(setup.get());
+    // make persistent
+    v8::Persistent<v8::Function> persistentFn;
+    persistentFn.Reset(setup->isolate(), requireFn);
+    this->jsi->SetPersistentGlobalFn(persistentFn, 0);
+    this->jsi->loadInspectFunction(requireFn);
+  }
+
+  return true;
 }
 
 int NodeRT::sayHello() {
@@ -79,5 +98,10 @@ int NodeRT::sayHello() {
 
   node::Stop(env);
   std::cout << "Hello world! " << exit_code << std::endl;
+  return 0;
+}
+
+int NodeRT::StartEventLoop() {
+  //this->event_loop_thread = std::thread([&]() { spinner->SpinDaLoop(setup.get()); });
   return 0;
 }

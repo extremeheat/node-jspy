@@ -26,3 +26,4 @@ struct JSSpinner {
     this->running = false;
   }
 };
+

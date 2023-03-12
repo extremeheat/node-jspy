@@ -16,6 +16,8 @@ v8::Maybe<int> JSSpinner::SpinDaLoop(node::CommonEnvironmentSetup *setup) {
     }*/
   };
 
+  // Due to weirdness with private headers being inaccessable to us (env.h),
+  // we have to put this method into Node.js code which has access to all the headers opposed to here
+  // TODO investigate further
   return SpinJspyLoop(setup, onTick);
 };
-

@@ -6,15 +6,15 @@
 
 <!-- source_link=lib/url.js -->
 
-The `url` module provides utilities for URL resolution and parsing. It can be
-accessed using:
+The `node:url` module provides utilities for URL resolution and parsing. It can
+be accessed using:
 
 ```mjs
-import url from 'url';
+import url from 'node:url';
 ```
 
 ```cjs
-const url = require('url');
+const url = require('node:url');
 ```
 
 ## URL strings and URL objects
@@ -23,11 +23,11 @@ A URL string is a structured string containing multiple meaningful components.
 When parsed, a URL object is returned containing properties for each of these
 components.
 
-The `url` module provides two APIs for working with URLs: a legacy API that is
-Node.js specific, and a newer API that implements the same
+The `node:url` module provides two APIs for working with URLs: a legacy API that
+is Node.js specific, and a newer API that implements the same
 [WHATWG URL Standard][] used by web browsers.
 
-A comparison between the WHATWG and Legacy APIs is provided below. Above the URL
+A comparison between the WHATWG and legacy APIs is provided below. Above the URL
 `'https://user:pass@sub.example.com:8080/p/a/t/h?query=string#hash'`, properties
 of an object returned by the legacy `url.parse()` are shown. Below it are
 properties of a WHATWG `URL` object.
@@ -63,16 +63,16 @@ const myURL =
   new URL('https://user:pass@sub.example.com:8080/p/a/t/h?query=string#hash');
 ```
 
-Parsing the URL string using the Legacy API:
+Parsing the URL string using the legacy API:
 
 ```mjs
-import url from 'url';
+import url from 'node:url';
 const myURL =
   url.parse('https://user:pass@sub.example.com:8080/p/a/t/h?query=string#hash');
 ```
 
 ```cjs
-const url = require('url');
+const url = require('node:url');
 const myURL =
   url.parse('https://user:pass@sub.example.com:8080/p/a/t/h?query=string#hash');
 ```
@@ -147,12 +147,12 @@ The URL constructor is accessible as a property on the global object.
 It can also be imported from the built-in url module:
 
 ```mjs
-import { URL } from 'url';
+import { URL } from 'node:url';
 console.log(URL === globalThis.URL); // Prints 'true'.
 ```
 
 ```cjs
-console.log(URL === require('url').URL); // Prints 'true'.
+console.log(URL === require('node:url').URL); // Prints 'true'.
 ```
 
 A `TypeError` will be thrown if the `input` or `base` are not valid URLs. Note
@@ -252,7 +252,7 @@ console.log(myURL.hostname);
 // Prints example.org
 
 // Setting the hostname does not change the port
-myURL.hostname = 'example.com:82';
+myURL.hostname = 'example.com';
 console.log(myURL.href);
 // Prints https://example.com:81/foo
 
@@ -332,7 +332,7 @@ console.log(myURL.password);
 
 myURL.password = '123';
 console.log(myURL.href);
-// Prints https://abc:123@example.com
+// Prints https://abc:123@example.com/
 ```
 
 Invalid URL characters included in the value assigned to the `password` property
@@ -490,7 +490,7 @@ For instance, changing from `http` to `https` works:
 const u = new URL('http://example.org');
 u.protocol = 'https';
 console.log(u.href);
-// https://example.org
+// https://example.org/
 ```
 
 However, changing from `http` to a hypothetical `fish` protocol does not
@@ -500,7 +500,7 @@ because the new protocol is not special.
 const u = new URL('http://example.org');
 u.protocol = 'fish';
 console.log(u.href);
-// http://example.org
+// http://example.org/
 ```
 
 Likewise, changing from a non-special protocol to a special protocol is also
@@ -554,14 +554,14 @@ instance, the `URL` object will not percent encode the ASCII tilde (`~`)
 character, while `URLSearchParams` will always encode it:
 
 ```js
-const myUrl = new URL('https://example.org/abc?foo=~bar');
+const myURL = new URL('https://example.org/abc?foo=~bar');
 
-console.log(myUrl.search);  // prints ?foo=~bar
+console.log(myURL.search);  // prints ?foo=~bar
 
 // Modify the URL via searchParams...
-myUrl.searchParams.sort();
+myURL.searchParams.sort();
 
-console.log(myUrl.search);  // prints ?foo=%7Ebar
+console.log(myURL.search);  // prints ?foo=%7Ebar
 ```
 
 #### `url.username`
@@ -630,7 +630,7 @@ object and can be used to retrieve the `Blob` later.
 const {
   Blob,
   resolveObjectURL,
-} = require('buffer');
+} = require('node:buffer');
 
 const blob = new Blob(['hello']);
 const id = URL.createObjectURL(blob);
@@ -659,7 +659,8 @@ added: v16.7.0
 * `id` {string} A `'blob:nodedata:...` URL string returned by a prior call to
   `URL.createObjectURL()`.
 
-Removes the stored {Blob} identified by the given ID.
+Removes the stored {Blob} identified by the given ID. Attempting to revoke a
+ID that isn't registered will silently fail.
 
 ### Class: `URLSearchParams`
 
@@ -761,7 +762,7 @@ joins all array elements with commas.
 ```js
 const params = new URLSearchParams({
   user: 'abc',
-  query: ['first', 'second']
+  query: ['first', 'second'],
 });
 console.log(params.getAll('query'));
 // Prints [ 'first,second' ]
@@ -853,7 +854,7 @@ Alias for [`urlSearchParams[@@iterator]()`][`urlSearchParams@@iterator()`].
 
 <!-- YAML
 changes:
-  - version: REPLACEME
+  - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/41678
     description: Passing an invalid callback to the `fn` argument
                  now throws `ERR_INVALID_ARG_TYPE` instead of
@@ -939,6 +940,14 @@ console.log(params.toString());
 // Prints foo=def&abc=def&xyz=opq
 ```
 
+#### `urlSearchParams.size`
+
+<!-- YAML
+added: REPLACEME
+-->
+
+The total number of parameter entries.
+
 #### `urlSearchParams.sort()`
 
 <!-- YAML
@@ -1013,7 +1022,7 @@ This feature is only available if the `node` executable was compiled with
 [ICU][] enabled. If not, the domain names are passed through unchanged.
 
 ```mjs
-import url from 'url';
+import url from 'node:url';
 
 console.log(url.domainToASCII('español.com'));
 // Prints xn--espaol-zwa.com
@@ -1024,7 +1033,7 @@ console.log(url.domainToASCII('xn--iñvalid.com'));
 ```
 
 ```cjs
-const url = require('url');
+const url = require('node:url');
 
 console.log(url.domainToASCII('español.com'));
 // Prints xn--espaol-zwa.com
@@ -1054,7 +1063,7 @@ This feature is only available if the `node` executable was compiled with
 [ICU][] enabled. If not, the domain names are passed through unchanged.
 
 ```mjs
-import url from 'url';
+import url from 'node:url';
 
 console.log(url.domainToUnicode('xn--espaol-zwa.com'));
 // Prints español.com
@@ -1065,7 +1074,7 @@ console.log(url.domainToUnicode('xn--iñvalid.com'));
 ```
 
 ```cjs
-const url = require('url');
+const url = require('node:url');
 
 console.log(url.domainToUnicode('xn--espaol-zwa.com'));
 // Prints español.com
@@ -1088,7 +1097,7 @@ This function ensures the correct decodings of percent-encoded characters as
 well as ensuring a cross-platform valid absolute path string.
 
 ```mjs
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -1106,7 +1115,7 @@ fileURLToPath('file:///hello world');      // Correct:   /hello world (POSIX)
 ```
 
 ```cjs
-const { fileURLToPath } = require('url');
+const { fileURLToPath } = require('node:url');
 new URL('file:///C:/path/').pathname;      // Incorrect: /C:/path/
 fileURLToPath('file:///C:/path/');         // Correct:   C:\path\ (Windows)
 
@@ -1148,7 +1157,7 @@ any way. The `url.format(URL[, options])` method allows for basic customization
 of the output.
 
 ```mjs
-import url from 'url';
+import url from 'node:url';
 const myURL = new URL('https://a:b@測試?abc#foo');
 
 console.log(myURL.href);
@@ -1162,7 +1171,7 @@ console.log(url.format(myURL, { fragment: false, unicode: true, auth: false }));
 ```
 
 ```cjs
-const url = require('url');
+const url = require('node:url');
 const myURL = new URL('https://a:b@測試?abc#foo');
 
 console.log(myURL.href);
@@ -1188,7 +1197,7 @@ This function ensures that `path` is resolved absolutely, and that the URL
 control characters are correctly encoded when converting into a File URL.
 
 ```mjs
-import { pathToFileURL } from 'url';
+import { pathToFileURL } from 'node:url';
 
 new URL('/foo#1', 'file:');           // Incorrect: file:///foo#1
 pathToFileURL('/foo#1');              // Correct:   file:///foo%231 (POSIX)
@@ -1198,7 +1207,7 @@ pathToFileURL('/some/path%.c');       // Correct:   file:///some/path%25.c (POSI
 ```
 
 ```cjs
-const { pathToFileURL } = require('url');
+const { pathToFileURL } = require('node:url');
 new URL(__filename);                  // Incorrect: throws (POSIX)
 new URL(__filename);                  // Incorrect: C:\... (Windows)
 pathToFileURL(__filename);            // Correct:   file:///... (POSIX)
@@ -1240,7 +1249,7 @@ This utility function converts a URL object into an ordinary options object as
 expected by the [`http.request()`][] and [`https.request()`][] APIs.
 
 ```mjs
-import { urlToHttpOptions } from 'url';
+import { urlToHttpOptions } from 'node:url';
 const myURL = new URL('https://a:b@測試?abc#foo');
 
 console.log(urlToHttpOptions(myURL));
@@ -1259,10 +1268,10 @@ console.log(urlToHttpOptions(myURL));
 ```
 
 ```cjs
-const { urlToHttpOptions } = require('url');
+const { urlToHttpOptions } = require('node:url');
 const myURL = new URL('https://a:b@測試?abc#foo');
 
-console.log(urlToHttpOptions(myUrl));
+console.log(urlToHttpOptions(myURL));
 /*
 {
   protocol: 'https:',
@@ -1309,7 +1318,8 @@ changes:
 
 > Stability: 3 - Legacy: Use the WHATWG URL API instead.
 
-The legacy `urlObject` (`require('url').Url` or `import { Url } from 'url'`) is
+The legacy `urlObject` (`require('node:url').Url` or
+`import { Url } from 'node:url'`) is
 created and returned by the `url.parse()` function.
 
 #### `urlObject.auth`
@@ -1445,15 +1455,15 @@ The `url.format()` method returns a formatted URL string derived from
 `urlObject`.
 
 ```js
-const url = require('url');
+const url = require('node:url');
 url.format({
   protocol: 'https',
   hostname: 'example.com',
   pathname: '/some/path',
   query: {
     page: 1,
-    format: 'json'
-  }
+    format: 'json',
+  },
 });
 
 // => 'https://example.com/some/path?page=1&format=json'
@@ -1520,6 +1530,11 @@ The formatting process operates as follows:
 added: v0.1.25
 changes:
   - version:
+      - v19.0.0
+      - v18.13.0
+    pr-url: https://github.com/nodejs/node/pull/44919
+    description: Documentation-only deprecation.
+  - version:
       - v15.13.0
       - v14.17.0
     pr-url: https://github.com/nodejs/node/pull/37784
@@ -1538,7 +1553,7 @@ changes:
                  when no query string is present.
 -->
 
-> Stability: 3 - Legacy: Use the WHATWG URL API instead.
+> Stability: 0 - Deprecated: Use the WHATWG URL API instead.
 
 * `urlString` {string} The URL string to parse.
 * `parseQueryString` {boolean} If `true`, the `query` property will always
@@ -1558,11 +1573,11 @@ A `TypeError` is thrown if `urlString` is not a string.
 
 A `URIError` is thrown if the `auth` property is present but cannot be decoded.
 
-Use of the legacy `url.parse()` method is discouraged. Users should
-use the WHATWG `URL` API. Because the `url.parse()` method uses a
-lenient, non-standard algorithm for parsing URL strings, security
-issues can be introduced. Specifically, issues with [host name spoofing][] and
-incorrect handling of usernames and passwords have been identified.
+`url.parse()` uses a lenient, non-standard algorithm for parsing URL
+strings. It is prone to security issues such as [host name spoofing][]
+and incorrect handling of usernames and passwords. Do not use with untrusted
+input. CVEs are not issued for `url.parse()` vulnerabilities. Use the
+[WHATWG URL][] API instead.
 
 ### `url.resolve(from, to)`
 
@@ -1601,7 +1616,7 @@ The `url.resolve()` method resolves a target URL relative to a base URL in a
 manner similar to that of a web browser resolving an anchor tag.
 
 ```js
-const url = require('url');
+const url = require('node:url');
 url.resolve('/one/two/three', 'four');         // '/one/two/four'
 url.resolve('http://example.com/', '/one');    // 'http://example.com/one'
 url.resolve('http://example.com/one', '/two'); // 'http://example.com/two'

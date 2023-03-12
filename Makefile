@@ -33,6 +33,27 @@ ifdef ENABLE_V8_TAP
 	TAP_V8 := --junitout $(PWD)/v8-tap.xml
 	TAP_V8_INTL := --junitout $(PWD)/v8-intl-tap.xml
 	TAP_V8_BENCHMARKS := --junitout $(PWD)/v8-benchmarks-tap.xml
+define convert_to_junit
+	@true
+endef
+endif
+
+ifdef ENABLE_CONVERT_V8_JSON_TO_XML
+	TAP_V8_JSON := $(PWD)/v8-tap.json
+	TAP_V8_INTL_JSON := $(PWD)/v8-intl-tap.json
+	TAP_V8_BENCHMARKS_JSON := $(PWD)/v8-benchmarks-tap.json
+
+	# By default, the V8's JSON test output only includes the tests which have
+	# failed. We use --slow-tests-cutoff to ensure that all tests are present
+	# in the output, including those which pass.
+	TAP_V8 := --json-test-results $(TAP_V8_JSON) --slow-tests-cutoff 1000000
+	TAP_V8_INTL := --json-test-results $(TAP_V8_INTL_JSON) --slow-tests-cutoff 1000000
+	TAP_V8_BENCHMARKS := --json-test-results $(TAP_V8_BENCHMARKS_JSON) --slow-tests-cutoff 1000000
+
+define convert_to_junit
+	export PATH="$(NO_BIN_OVERRIDE_PATH)" && \
+		$(PYTHON) tools/v8-json-to-junit.py < $(1) > $(1:.json=.xml)
+endef
 endif
 
 V8_TEST_OPTIONS = $(V8_EXTRA_TEST_OPTIONS)
@@ -115,6 +136,7 @@ $(NODE_EXE) $(NODE_G_EXE): config.gypi out/Makefile
 	  ln -fs out/${build_type}/$(NODE_EXE) $@; fi
 else
 ifeq ($(BUILD_WITH), ninja)
+NINJA ?= ninja
 ifeq ($(V),1)
 	NINJA_ARGS := $(NINJA_ARGS) -v
 endif
@@ -124,11 +146,11 @@ else
 	NINJA_ARGS := $(NINJA_ARGS) $(filter -j%,$(MAKEFLAGS))
 endif
 $(NODE_EXE): config.gypi out/Release/build.ninja
-	ninja -C out/Release $(NINJA_ARGS)
+	$(NINJA) -C out/Release $(NINJA_ARGS)
 	if [ ! -r $@ ] || [ ! -L $@ ]; then ln -fs out/Release/$(NODE_EXE) $@; fi
 
 $(NODE_G_EXE): config.gypi out/Debug/build.ninja
-	ninja -C out/Debug $(NINJA_ARGS)
+	$(NINJA) -C out/Debug $(NINJA_ARGS)
 	if [ ! -r $@ ] || [ ! -L $@ ]; then ln -fs out/Debug/$(NODE_EXE) $@; fi
 else
 $(NODE_EXE) $(NODE_G_EXE):
@@ -148,6 +170,7 @@ with-code-cache test-code-cache:
 
 out/Makefile: config.gypi common.gypi node.gyp \
 	deps/uv/uv.gyp deps/llhttp/llhttp.gyp deps/zlib/zlib.gyp \
+	deps/simdutf/simdutf.gyp deps/ada/ada.gyp \
 	tools/v8_gypfiles/toolchain.gypi tools/v8_gypfiles/features.gypi \
 	tools/v8_gypfiles/inspector.gypi tools/v8_gypfiles/v8.gyp
 	$(PYTHON) tools/gyp_node.py -f make
@@ -345,6 +368,9 @@ DOCBUILDSTAMP_PREREQS = tools/doc/addon-verify.mjs doc/api/addons.md
 ifeq ($(OSTYPE),aix)
 DOCBUILDSTAMP_PREREQS := $(DOCBUILDSTAMP_PREREQS) out/$(BUILDTYPE)/node.exp
 endif
+ifeq ($(OSTYPE),os400)
+DOCBUILDSTAMP_PREREQS := $(DOCBUILDSTAMP_PREREQS) out/$(BUILDTYPE)/node.exp
+endif
 
 node_use_openssl = $(call available-node,"-p" \
 			 "process.versions.openssl != undefined")
@@ -366,13 +392,13 @@ ADDONS_BINDING_SOURCES := \
 	$(filter-out test/addons/??_*/*.h, $(wildcard test/addons/*/*.h))
 
 ADDONS_PREREQS := config.gypi \
-	deps/npm/node_modules/node-gyp/package.json tools/build-addons.js \
+	deps/npm/node_modules/node-gyp/package.json tools/build-addons.mjs \
 	deps/uv/include/*.h deps/v8/include/*.h \
 	src/node.h src/node_buffer.h src/node_object_wrap.h src/node_version.h
 
 define run_build_addons
 env npm_config_loglevel=$(LOGLEVEL) npm_config_nodedir="$$PWD" \
-	npm_config_python="$(PYTHON)" $(NODE) "$$PWD/tools/build-addons" \
+	npm_config_python="$(PYTHON)" $(NODE) "$$PWD/tools/build-addons.mjs" \
 	"$$PWD/deps/npm/node_modules/node-gyp/bin/node-gyp.js" \
 	$1
 touch $2
@@ -572,6 +598,12 @@ test-message: test-build
 test-wpt: all
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) wpt
 
+.PHONY: test-wpt-report
+test-wpt-report:
+	$(RM) -r out/wpt
+	mkdir -p out/wpt
+	WPT_REPORT=1 $(PYTHON) tools/test.py --shell $(NODE) $(PARALLEL_ARGS) wpt
+
 .PHONY: test-simple
 test-simple: | cctest # Depends on 'all'.
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) parallel sequential
@@ -679,23 +711,26 @@ ifneq ("","$(wildcard deps/v8/tools/run-tests.py)")
 # Related CI job: node-test-commit-v8-linux
 test-v8: v8  ## Runs the V8 test suite on deps/v8.
 	export PATH="$(NO_BIN_OVERRIDE_PATH)" && \
-		deps/v8/tools/run-tests.py --gn --arch=$(V8_ARCH) $(V8_TEST_OPTIONS) \
+		$(PYTHON) deps/v8/tools/run-tests.py --gn --arch=$(V8_ARCH) $(V8_TEST_OPTIONS) \
 				mjsunit cctest debugger inspector message preparser \
 				$(TAP_V8)
+	$(call convert_to_junit,$(TAP_V8_JSON))
 	$(info Testing hash seed)
 	$(MAKE) test-hash-seed
 
 test-v8-intl: v8
 	export PATH="$(NO_BIN_OVERRIDE_PATH)" && \
-		deps/v8/tools/run-tests.py --gn --arch=$(V8_ARCH) \
+		$(PYTHON) deps/v8/tools/run-tests.py --gn --arch=$(V8_ARCH) \
 				intl \
 				$(TAP_V8_INTL)
+	$(call convert_to_junit,$(TAP_V8_INTL_JSON))
 
 test-v8-benchmarks: v8
 	export PATH="$(NO_BIN_OVERRIDE_PATH)" && \
-		deps/v8/tools/run-tests.py --gn --arch=$(V8_ARCH) \
+		$(PYTHON) deps/v8/tools/run-tests.py --gn --arch=$(V8_ARCH) \
 				benchmarks \
 				$(TAP_V8_BENCHMARKS)
+	$(call convert_to_junit,$(TAP_V8_BENCHMARKS_JSON))
 
 test-v8-updates:
 	$(PYTHON) tools/test.py $(PARALLEL_ARGS) --mode=$(BUILDTYPE_LOWER) v8-updates
@@ -1096,7 +1131,7 @@ endif
 		$(MACOSOUTDIR)/dist/npm/usr/local/lib/node_modules
 	unlink $(MACOSOUTDIR)/dist/node/usr/local/bin/npm
 	unlink $(MACOSOUTDIR)/dist/node/usr/local/bin/npx
-	$(NODE) tools/license2rtf.js < LICENSE > \
+	$(NODE) tools/license2rtf.mjs < LICENSE > \
 		$(MACOSOUTDIR)/installer/productbuild/Resources/license.rtf
 	cp doc/osx_installer_logo.png $(MACOSOUTDIR)/installer/productbuild/Resources
 	pkgbuild --version $(FULLVERSION) \
@@ -1119,12 +1154,14 @@ pkg: $(PKG)
 
 .PHONY: corepack-update
 corepack-update:
-	rm -rf /tmp/node-corepack-clone
-	git clone 'https://github.com/nodejs/corepack.git' /tmp/node-corepack-clone
-	cd /tmp/node-corepack-clone && yarn pack
-	rm -rf deps/corepack && mkdir -p deps/corepack
-	cd deps/corepack && tar xf /tmp/node-corepack-clone/package.tgz --strip-components=1
+	mkdir -p /tmp/node-corepack
+	curl -qLo /tmp/node-corepack/package.tgz "$$(npm view corepack dist.tarball)"
+
+	rm -rf deps/corepack && mkdir deps/corepack
+	cd deps/corepack && tar xf /tmp/node-corepack/package.tgz --strip-components=1
 	chmod +x deps/corepack/shims/*
+
+	node deps/corepack/dist/corepack.js --version
 
 .PHONY: pkg-upload
 # Note: this is strictly for release builds on release machines only.
@@ -1377,7 +1414,6 @@ LINT_CPP_ADDON_DOC_FILES = $(wildcard $(LINT_CPP_ADDON_DOC_FILES_GLOB))
 LINT_CPP_EXCLUDE ?=
 LINT_CPP_EXCLUDE += src/node_root_certs.h
 LINT_CPP_EXCLUDE += $(LINT_CPP_ADDON_DOC_FILES)
-LINT_CPP_EXCLUDE += $(wildcard test/js-native-api/??_*/*.cc test/js-native-api/??_*/*.h test/node-api/??_*/*.cc test/node-api/??_*/*.h)
 # These files were copied more or less verbatim from V8.
 LINT_CPP_EXCLUDE += src/tracing/trace_event.h src/tracing/trace_event_common.h
 
@@ -1397,9 +1433,7 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	test/embedding/*.h \
 	test/fixtures/*.c \
 	test/js-native-api/*/*.cc \
-	test/js-native-api/*/*.h \
 	test/node-api/*/*.cc \
-	test/node-api/*/*.h \
 	tools/icu/*.cc \
 	tools/icu/*.h \
 	tools/code_cache/*.cc \
@@ -1407,6 +1441,16 @@ LINT_CPP_FILES = $(filter-out $(LINT_CPP_EXCLUDE), $(wildcard \
 	tools/snapshot/*.cc \
 	tools/snapshot/*.h \
 	))
+
+FORMAT_CPP_FILES ?=
+FORMAT_CPP_FILES += $(LINT_CPP_FILES)
+# C source codes.
+FORMAT_CPP_FILES += $(wildcard \
+	test/js-native-api/*/*.c \
+	test/js-native-api/*/*.h \
+	test/node-api/*/*.c \
+	test/node-api/*/*.h \
+	)
 
 # Code blocks don't have newline at the end,
 # and the actual filename is generated so it won't match header guards
@@ -1427,8 +1471,8 @@ CLANG_FORMAT_START ?= HEAD
 #  $ make format-cpp
 # To format HEAD~1...HEAD (latest commit):
 #  $ CLANG_FORMAT_START=`git rev-parse HEAD~1` make format-cpp
-# To format diff between master and current branch head (master...HEAD):
-#  $ CLANG_FORMAT_START=master make format-cpp
+# To format diff between main and current branch head (main...HEAD):
+#  $ CLANG_FORMAT_START=main make format-cpp
 format-cpp: ## Format C++ diff from $CLANG_FORMAT_START to current changes
 ifneq ("","$(wildcard tools/clang-format/node_modules/)")
 	$(info Formatting C++ diff from $(CLANG_FORMAT_START)..)
@@ -1436,9 +1480,9 @@ ifneq ("","$(wildcard tools/clang-format/node_modules/)")
 		--binary=tools/clang-format/node_modules/.bin/clang-format \
 		--style=file \
 		$(CLANG_FORMAT_START) -- \
-		$(LINT_CPP_FILES)
+		$(FORMAT_CPP_FILES)
 else
-	$(info clang-format is not installed.)
+	$(info Required tooling for C++ code formatting is not installed.)
 	$(info To install (requires internet access) run: $$ make format-cpp-build)
 endif
 
@@ -1522,7 +1566,7 @@ CONFLICT_RE=^>>>>>>> [[:xdigit:]]+|^<<<<<<< [[:alpha:]]+
 
 # Related CI job: node-test-linter
 lint-ci: lint-js-ci lint-cpp lint-py lint-md lint-addon-docs lint-yaml-build lint-yaml
-	@if ! ( grep -IEqrs "$(CONFLICT_RE)" --exclude="error-message.js" benchmark deps doc lib src test tools ) \
+	@if ! ( grep -IEqrs "$(CONFLICT_RE)" --exclude="error-message.js" --exclude="merge-conflict.json" benchmark deps doc lib src test tools ) \
 		&& ! ( $(FIND) . -maxdepth 1 -type f | xargs grep -IEqs "$(CONFLICT_RE)" ); then \
 		exit 0 ; \
 	else \

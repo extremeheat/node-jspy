@@ -10,14 +10,17 @@ const ArboristWorkspaceCmd = require('../arborist-cmd.js')
 class Update extends ArboristWorkspaceCmd {
   static description = 'Update packages'
   static name = 'update'
+
   static params = [
+    'save',
     'global',
-    'global-style',
+    'install-strategy',
     'legacy-bundling',
+    'global-style',
+    'omit',
     'strict-peer-deps',
     'package-lock',
-    'save',
-    'omit',
+    'foreground-scripts',
     'ignore-scripts',
     'audit',
     'bin-links',
@@ -37,9 +40,7 @@ class Update extends ArboristWorkspaceCmd {
   async exec (args) {
     const update = args.length === 0 ? true : args
     const global = path.resolve(this.npm.globalDir, '..')
-    const where = this.npm.config.get('global')
-      ? global
-      : this.npm.prefix
+    const where = this.npm.global ? global : this.npm.prefix
 
     // In the context of `npm update` the save
     // config value should default to `false`
@@ -54,7 +55,6 @@ class Update extends ArboristWorkspaceCmd {
 
     const opts = {
       ...this.npm.flatOptions,
-      log,
       path: where,
       save,
       workspaces: this.workspaceNames,

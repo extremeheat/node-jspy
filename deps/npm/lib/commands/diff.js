@@ -6,7 +6,7 @@ const Arborist = require('@npmcli/arborist')
 const pacote = require('pacote')
 const pickManifest = require('npm-pick-manifest')
 const log = require('../utils/log-shim')
-const readPackageName = require('../utils/read-package-name.js')
+const readPackage = require('read-package-json-fast')
 const BaseCommand = require('../base-command.js')
 
 class Diff extends BaseCommand {
@@ -32,6 +32,9 @@ class Diff extends BaseCommand {
     'include-workspace-root',
   ]
 
+  static workspaces = true
+  static ignoreImplicitWorkspace = false
+
   async exec (args) {
     const specs = this.npm.config.get('diff').filter(d => d)
     if (specs.length > 2) {
@@ -48,7 +51,7 @@ class Diff extends BaseCommand {
     // node_modules is sometimes under ./lib, and in global mode we're only ever
     // walking through node_modules (because we will have been given a package
     // name already)
-    if (this.npm.config.get('global')) {
+    if (this.npm.global) {
       this.top = resolve(this.npm.globalDir, '..')
     } else {
       this.top = this.prefix
@@ -61,13 +64,12 @@ class Diff extends BaseCommand {
       ...this.npm.flatOptions,
       diffFiles: args,
       where: this.top,
-      log,
     })
     return this.npm.output(res)
   }
 
-  async execWorkspaces (args, filters) {
-    await this.setWorkspaces(filters)
+  async execWorkspaces (args) {
+    await this.setWorkspaces()
     for (const workspacePath of this.workspacePaths) {
       this.top = workspacePath
       this.prefix = workspacePath
@@ -80,7 +82,8 @@ class Diff extends BaseCommand {
   async packageName (path) {
     let name
     try {
-      name = await readPackageName(this.prefix)
+      const pkg = await readPackage(resolve(this.prefix, 'package.json'))
+      name = pkg.name
     } catch (e) {
       log.verbose('diff', 'could not read project dir package.json')
     }
@@ -104,7 +107,7 @@ class Diff extends BaseCommand {
       const pkgName = await this.packageName(this.prefix)
       return [
         `${pkgName}@${this.npm.config.get('tag')}`,
-        `file:${this.prefix}`,
+        `file:${this.prefix.replace(/#/g, '%23')}`,
       ]
     }
 
@@ -113,7 +116,8 @@ class Diff extends BaseCommand {
     let noPackageJson
     let pkgName
     try {
-      pkgName = await readPackageName(this.prefix)
+      const pkg = await readPackage(resolve(this.prefix, 'package.json'))
+      pkgName = pkg.name
     } catch (e) {
       log.verbose('diff', 'could not read project dir package.json')
       noPackageJson = true
@@ -131,7 +135,7 @@ class Diff extends BaseCommand {
       }
       return [
         `${pkgName}@${a}`,
-        `file:${this.prefix}`,
+        `file:${this.prefix.replace(/#/g, '%23')}`,
       ]
     }
 
@@ -162,7 +166,7 @@ class Diff extends BaseCommand {
         }
         return [
           `${spec.name}@${spec.fetchSpec}`,
-          `file:${this.prefix}`,
+          `file:${this.prefix.replace(/#/g, '%23')}`,
         ]
       }
 
@@ -175,14 +179,14 @@ class Diff extends BaseCommand {
         }
       }
 
-      const aSpec = `file:${node.realpath}`
+      const aSpec = `file:${node.realpath.replace(/#/g, '%23')}`
 
       // finds what version of the package to compare against, if a exact
       // version or tag was passed than it should use that, otherwise
       // work from the top of the arborist tree to find the original semver
       // range declared in the package that depends on the package.
       let bSpec
-      if (spec.rawSpec) {
+      if (spec.rawSpec !== '*') {
         bSpec = spec.rawSpec
       } else {
         const bTargetVersion =
@@ -194,7 +198,6 @@ class Diff extends BaseCommand {
         const packument = await pacote.packument(spec, {
           ...this.npm.flatOptions,
           preferOnline: true,
-          log,
         })
         bSpec = pickManifest(
           packument,
@@ -209,8 +212,8 @@ class Diff extends BaseCommand {
       ]
     } else if (spec.type === 'directory') {
       return [
-        `file:${spec.fetchSpec}`,
-        `file:${this.prefix}`,
+        `file:${spec.fetchSpec.replace(/#/g, '%23')}`,
+        `file:${this.prefix.replace(/#/g, '%23')}`,
       ]
     } else {
       throw this.usageError(`Spec type ${spec.type} not supported.`)
@@ -225,7 +228,8 @@ class Diff extends BaseCommand {
     if (semverA && semverB) {
       let pkgName
       try {
-        pkgName = await readPackageName(this.prefix)
+        const pkg = await readPackage(resolve(this.prefix, 'package.json'))
+        pkgName = pkg.name
       } catch (e) {
         log.verbose('diff', 'could not read project dir package.json')
       }
@@ -266,7 +270,7 @@ class Diff extends BaseCommand {
 
     return specs.map(i => {
       const spec = npa(i)
-      if (spec.rawSpec) {
+      if (spec.rawSpec !== '*') {
         return i
       }
 
@@ -276,7 +280,7 @@ class Diff extends BaseCommand {
 
       const res = !node || !node.package || !node.package.version
         ? spec.fetchSpec
-        : `file:${node.realpath}`
+        : `file:${node.realpath.replace(/#/g, '%23')}`
 
       return `${spec.name}@${res}`
     })

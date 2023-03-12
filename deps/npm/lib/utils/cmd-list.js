@@ -1,5 +1,23 @@
-// short names for common things
-const shorthands = {
+const abbrev = require('abbrev')
+const localeCompare = require('@isaacs/string-locale-compare')('en')
+
+// plumbing should not have any aliases
+const aliases = {
+
+  // aliases
+  author: 'owner',
+  home: 'docs',
+  issues: 'bugs',
+  info: 'view',
+  show: 'view',
+  find: 'search',
+  add: 'install',
+  unlink: 'uninstall',
+  remove: 'uninstall',
+  rm: 'uninstall',
+  r: 'uninstall',
+
+  // short names for common things
   un: 'uninstall',
   rb: 'rebuild',
   list: 'ls',
@@ -21,12 +39,11 @@ const shorthands = {
   'clean-install-test': 'cit',
   x: 'exec',
   why: 'explain',
-}
-
-const affordances = {
   la: 'll',
   verison: 'version',
   ic: 'ci',
+
+  // typos
   innit: 'init',
   // manually abbrev so that install-test doesn't make insta stop working
   in: 'install',
@@ -37,125 +54,97 @@ const affordances = {
   isnt: 'install',
   isnta: 'install',
   isntal: 'install',
+  isntall: 'install',
   'install-clean': 'ci',
   'isntall-clean': 'ci',
   hlep: 'help',
   'dist-tags': 'dist-tag',
   upgrade: 'update',
   udpate: 'update',
-  login: 'adduser',
-  'add-user': 'adduser',
-  author: 'owner',
-  home: 'docs',
-  issues: 'bugs',
-  info: 'view',
-  show: 'view',
-  find: 'search',
-  add: 'install',
-  unlink: 'uninstall',
-  remove: 'uninstall',
-  rm: 'uninstall',
-  r: 'uninstall',
   rum: 'run-script',
   sit: 'cit',
   urn: 'run-script',
   ogr: 'org',
+  'add-user': 'adduser',
 }
 
 // these are filenames in .
-const cmdList = [
-  'ci',
-  'install-ci-test',
-  'install',
-  'install-test',
-  'uninstall',
-  'cache',
-  'config',
-  'set',
-  'get',
-  'update',
-  'outdated',
-  'prune',
-  'pack',
-  'find-dupes',
-  'dedupe',
-  'hook',
-
-  'rebuild',
-  'link',
-
-  'publish',
-  'star',
-  'stars',
-  'unstar',
-  'adduser',
-  'login', // This is an alias for `adduser` but it can be confusing
-  'logout',
-  'unpublish',
-  'owner',
+const commands = [
   'access',
-  'team',
-  'deprecate',
-  'shrinkwrap',
-  'token',
-  'profile',
+  'adduser',
   'audit',
-  'fund',
-  'org',
-
-  'help',
-  'ls',
-  'll',
-  'search',
-  'view',
-  'init',
-  'version',
-  'edit',
-  'explore',
-  'docs',
-  'repo',
   'bugs',
-  'root',
-  'prefix',
-  'bin',
-  'whoami',
+  'cache',
+  'ci',
+  'completion',
+  'config',
+  'dedupe',
+  'deprecate',
   'diff',
   'dist-tag',
-  'ping',
-  'pkg',
-
-  'test',
-  'stop',
-  'start',
-  'restart',
-  'run-script',
-  'set-script',
-  'completion',
+  'docs',
   'doctor',
+  'edit',
   'exec',
   'explain',
-]
-
-const plumbing = ['birthday', 'help-search']
-
-// these commands just shell out to something else or handle the
-// error themselves, so it's confusing and weird to write out
-// our full error log banner when they exit non-zero
-const shellouts = [
-  'exec',
+  'explore',
+  'find-dupes',
+  'fund',
+  'get',
+  'help',
+  'hook',
+  'init',
+  'install',
+  'install-ci-test',
+  'install-test',
+  'link',
+  'll',
+  'login', // This is an alias for `adduser` but it can be confusing
+  'logout',
+  'ls',
+  'org',
+  'outdated',
+  'owner',
+  'pack',
+  'ping',
+  'pkg',
+  'prefix',
+  'profile',
+  'prune',
+  'publish',
+  'query',
+  'rebuild',
+  'repo',
+  'restart',
+  'root',
   'run-script',
-  'test',
+  'search',
+  'set',
+  'shrinkwrap',
+  'star',
+  'stars',
   'start',
   'stop',
-  'restart',
-  'birthday',
-]
+  'team',
+  'test',
+  'token',
+  'uninstall',
+  'unpublish',
+  'unstar',
+  'update',
+  'version',
+  'view',
+  'whoami',
+].sort(localeCompare)
+
+const plumbing = ['help-search']
+const allCommands = [...commands, ...plumbing].sort(localeCompare)
+const abbrevs = abbrev(commands.concat(Object.keys(aliases)))
 
 module.exports = {
-  aliases: Object.assign({}, shorthands, affordances),
-  shorthands,
-  affordances,
-  cmdList,
+  abbrevs,
+  aliases,
+  commands,
   plumbing,
-  shellouts,
+  allCommands,
 }

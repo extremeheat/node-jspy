@@ -20,6 +20,8 @@ namespace performance {
 
 // These occur before the environment is created. Cache them
 // here and add them to the milestones when the env is init'd.
+extern const uint64_t performance_process_start;
+extern const double performance_process_start_timestamp;
 extern uint64_t performance_v8_start;
 
 #define NODE_PERFORMANCE_MILESTONES(V)                                        \
@@ -34,7 +36,9 @@ extern uint64_t performance_v8_start;
 #define NODE_PERFORMANCE_ENTRY_TYPES(V)                                       \
   V(GC, "gc")                                                                 \
   V(HTTP, "http")                                                             \
-  V(HTTP2, "http2")
+  V(HTTP2, "http2")                                                           \
+  V(NET, "net")                                                               \
+  V(DNS, "dns")
 
 enum PerformanceMilestone {
 #define V(name, _) NODE_PERFORMANCE_MILESTONE_##name,
@@ -69,6 +73,7 @@ class PerformanceState {
   AliasedUint32Array observers;
 
   uint64_t performance_last_gc_start_mark = 0;
+  uint16_t current_gc_type = 0;
 
   void Mark(enum PerformanceMilestone milestone,
             uint64_t ts = PERFORMANCE_NOW());

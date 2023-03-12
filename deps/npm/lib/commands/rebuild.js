@@ -11,11 +11,12 @@ class Rebuild extends ArboristWorkspaceCmd {
   static params = [
     'global',
     'bin-links',
+    'foreground-scripts',
     'ignore-scripts',
     ...super.params,
   ]
 
-  static usage = ['[[<@scope>/]<name>[@<version>] ...]']
+  static usage = ['[<package-spec>] ...]']
 
   // TODO
   /* istanbul ignore next */
@@ -25,7 +26,7 @@ class Rebuild extends ArboristWorkspaceCmd {
 
   async exec (args) {
     const globalTop = resolve(this.npm.globalDir, '..')
-    const where = this.npm.config.get('global') ? globalTop : this.npm.prefix
+    const where = this.npm.global ? globalTop : this.npm.prefix
     const arb = new Arborist({
       ...this.npm.flatOptions,
       path: where,
@@ -38,7 +39,7 @@ class Rebuild extends ArboristWorkspaceCmd {
       const tree = await arb.loadActual()
       const specs = args.map(arg => {
         const spec = npa(arg)
-        if (spec.type === 'tag' && spec.rawSpec === '') {
+        if (spec.rawSpec === '*') {
           return spec
         }
 

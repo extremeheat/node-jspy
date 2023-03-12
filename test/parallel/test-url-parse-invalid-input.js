@@ -1,6 +1,7 @@
 'use strict';
 const common = require('../common');
 const assert = require('assert');
+const childProcess = require('child_process');
 const url = require('url');
 
 // https://github.com/joyent/node/issues/568
@@ -37,6 +38,10 @@ assert.throws(() => { url.parse('http://%E0%A4%A@fail'); },
                 return e.code === undefined;
               });
 
+assert.throws(() => { url.parse('http://[127.0.0.1\x00c8763]:8000/'); },
+              { code: 'ERR_INVALID_URL', input: 'http://[127.0.0.1\x00c8763]:8000/' }
+);
+
 if (common.hasIntl) {
   // An array of Unicode code points whose Unicode NFKD contains a "bad
   // character".
@@ -69,4 +74,32 @@ if (common.hasIntl) {
   assert.throws(() => { url.parse('http://\u00AD/bad.com/'); },
                 (e) => e.code === 'ERR_INVALID_URL',
                 'parsing http://\u00AD/bad.com/');
+}
+
+{
+  const badURLs = [
+    'https://evil.com:.example.com',
+    'git+ssh://git@github.com:npm/npm',
+  ];
+  badURLs.forEach((badURL) => {
+    childProcess.exec(`${process.execPath} -e "url.parse('${badURL}')"`,
+                      common.mustCall((err, stdout, stderr) => {
+                        assert.strictEqual(err, null);
+                        assert.strictEqual(stdout, '');
+                        assert.match(stderr, /\[DEP0170\] DeprecationWarning:/);
+                      })
+    );
+  });
+
+  // Warning should only happen once per process.
+  const expectedWarning = [
+    `The URL ${badURLs[0]} is invalid. Future versions of Node.js will throw an error.`,
+    'DEP0170',
+  ];
+  common.expectWarning({
+    DeprecationWarning: expectedWarning,
+  });
+  badURLs.forEach((badURL) => {
+    url.parse(badURL);
+  });
 }

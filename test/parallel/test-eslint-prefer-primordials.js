@@ -57,7 +57,9 @@ new RuleTester({
       {
         code: `
           const { ObjectDefineProperty, Symbol } = primordials;
-          ObjectDefineProperty(o, Symbol.toStringTag, { value: "o" })
+          ObjectDefineProperty(o, Symbol.toStringTag, { value: "o" });
+          const val = Symbol.toStringTag;
+          const { toStringTag } = Symbol;
         `,
         options: [{ name: 'Symbol', ignore: ['toStringTag'] }]
       },
@@ -98,6 +100,34 @@ new RuleTester({
           const obj = { rename };
         `,
         options: [{ name: 'Function' }],
+      },
+      {
+        code: 'function identifier() {}',
+        options: [{ name: 'identifier' }]
+      },
+      {
+        code: 'function* identifier() {}',
+        options: [{ name: 'identifier' }]
+      },
+      {
+        code: 'class identifier {}',
+        options: [{ name: 'identifier' }]
+      },
+      {
+        code: 'new class { identifier(){} }',
+        options: [{ name: 'identifier' }]
+      },
+      {
+        code: 'const a = { identifier: \'4\' }',
+        options: [{ name: 'identifier' }]
+      },
+      {
+        code: 'identifier:{const a = 4}',
+        options: [{ name: 'identifier' }]
+      },
+      {
+        code: 'switch(0){case identifier:}',
+        options: [{ name: 'identifier' }]
       },
     ],
     invalid: [

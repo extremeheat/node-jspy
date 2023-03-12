@@ -1,4 +1,4 @@
-name: \U0001F41B Bug report
+name: 🐛 Bug report
 description: Create a report to help us improve
 body:
   - type: markdown
@@ -19,7 +19,7 @@ body:
       label: Platform
       description: |
         UNIX: output of `uname -a`
-        Windows: output of `"$([Environment]::OSVersion | ForEach-Object VersionString) $(if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" })"` in PowerShell console
+        Windows: output of `"$([Environment]::OSVersion.VersionString) $(('x86', 'x64')[[Environment]::Is64BitOperatingSystem])"` in PowerShell console
   - type: input
     attributes:
       label: Subsystem

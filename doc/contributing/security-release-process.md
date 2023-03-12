@@ -19,14 +19,22 @@ steps listed in the process as outlined in
 The current security stewards are documented in the main Node.js
 [README.md](https://github.com/nodejs/node#security-release-stewards).
 
-| Company    | Person   | Release Date |
-| ---------- | -------- | ------------ |
-| NearForm   | Matteo   | 2021-Oct-12  |
-| Datadog    | Bryan    | 2022-Jan-10  |
-| RH and IBM | Joe      |              |
-| NearForm   | Matteo   |              |
-| Datadog    | Vladimir |              |
-| RH and IBM | Michael  |              |
+| Company      | Person          | Release Date |
+| ------------ | --------------- | ------------ |
+| NearForm     | Matteo          | 2021-Oct-12  |
+| Datadog      | Bryan           | 2022-Jan-10  |
+| RH and IBM   | Joe             | 2022-Mar-18  |
+| NearForm     | Matteo / Rafael | 2022-Jul-07  |
+| Datadog      | Vladimir        | 2022-Sep-23  |
+| NodeSource   | Juan            | 2022-Nov-04  |
+| RH and IBM   | Michael         | 2023-Feb-16  |
+| Platformatic | Matteo          |              |
+| Datadog      | Bryan           |              |
+| IBM          | Joe             |              |
+| NearForm     | Rafael          |              |
+| Datadog      | Vladimir        |              |
+| NodeSource   | Juan            |              |
+| Red Hat      | Michael         |              |
 
 ## Planning
 
@@ -41,6 +49,10 @@ The current security stewards are documented in the main Node.js
 * [ ] PR release announcements in [private](https://github.com/nodejs-private/nodejs.org-private):
   * (Use previous PRs as templates. Don't forget to update the site banner and
     the date in the slug so that it will move to the top of the blog list.)
+  * (Consider using a [Vulnerability Score System](https://www.first.org/cvss/calculator/3.1)
+    to identify severity of each report)
+  * Share the patch with the reporter when applicable.
+    It will increase the fix accuracy.
   * [ ] pre-release: _**LINK TO PR**_
   * [ ] post-release: _**LINK TO PR**_
     * List vulnerabilities in order of descending severity
@@ -63,6 +75,10 @@ The current security stewards are documented in the main Node.js
 * [ ] Check that all vulnerabilities are ready for release integration:
   * PRs against all affected release lines or cherry-pick clean
   * Approved
+  * (optional) Approved by the reporter
+    * Build and send the binary to the reporter according to its architecture
+      and ask for a review. This step is important to avoid insufficient fixes
+      between Security Releases.
   * Pass `make test`
   * Have CVEs
     * Make sure that dependent libraries have CVEs for their issues. We should
@@ -73,6 +89,17 @@ The current security stewards are documented in the main Node.js
 * [ ] Pre-release announcement to nodejs.org blog: _**LINK TO BLOG**_
   (Re-PR the pre-approved branch from nodejs-private/nodejs.org-private to
   nodejs/nodejs.org)
+
+  If the security release will only contain an OpenSSL update consider
+  adding the following to the pre-release announcement:
+
+  ```text
+  Since this security release will only include updates for OpenSSL, if you're using
+  a Node.js version which is part of a distribution which uses a system
+  installed OpenSSL, this Node.js security update might not concern you. You may
+  instead need to update your system OpenSSL libraries, please check the
+  security announcements for the distribution.
+  ```
 
 * [ ] Pre-release announcement [email][]: _**LINK TO EMAIL**_
   * Subject: `Node.js security updates for all active release lines, Month Year`
@@ -91,6 +118,7 @@ out a better way, forward the email you receive to
 `oss-security@lists.openwall.com` as a CC.
 
 * [ ] Create a new issue in [nodejs/tweet][]
+
   ```text
   Security release pre-alert:
 
@@ -102,6 +130,13 @@ out a better way, forward the email you receive to
 
   https://nodejs.org/en/blog/vulnerability/month-year-security-releases/
   ```
+
+  We specifically ask that collaborators other than the releasers and security
+  steward working on the security release do not tweet or publicise the release
+  until the tweet from the Node.js twitter handle goes out. We have often
+  seen tweets sent out before the release and associated announcements are
+  complete which may confuse those waiting for the release and also takes
+  away from the work the releasers have put into shipping the releases.
 
 * [ ] Request releaser(s) to start integrating the PRs to be released.
 
@@ -171,6 +206,31 @@ out a better way, forward the email you receive to
 * [ ] Close this issue
 
 * [ ] Make sure the PRs for the vulnerabilities are closed.
+
+* [ ] PR in that you stewarded the release in
+  [Security release stewards](https://github.com/nodejs/node/blob/HEAD/doc/contributing/security-release-process.md#security-release-stewards).
+  If necessary add the next rotation of the steward rotation.
+
+## When things go wrong
+
+### Incomplete fixes
+
+When a CVE is reported as fixed in a security release and it turns out that the
+fix was incomplete, a new CVE should be used to cover subsequent fix. This
+is best practice and avoids confusion that might occur if people believe
+they have patched the original CVE by updating their Node.js version and
+then we later change the `fixed in` value for the CVE.
+
+### Updating CVEs
+
+The steps to correct CVE information are:
+
+* Go to the “CVE IDs” section in your program
+  sections (<https://hackerone.com/nodejs/cve_requests>)
+* Click the “Request a CVE ID” button
+* Enter the CVE ID that needs to be updated
+* Include all the details that need updating within the form
+* Submit the request
 
 [H1 CVE requests]: https://hackerone.com/nodejs/cve_requests
 [docker-node]: https://github.com/nodejs/docker-node/issues

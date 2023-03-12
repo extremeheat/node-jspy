@@ -146,21 +146,10 @@ npm command-line interface
 </section>
 
 <div id="_content"><h3 id="synopsis">Synopsis</h3>
-<pre lang="bash"><code>npm exec -- &lt;pkg&gt;[@&lt;version&gt;] [args...]
-npm exec --package=&lt;pkg&gt;[@&lt;version&gt;] -- &lt;cmd&gt; [args...]
-npm exec -c '&lt;cmd&gt; [args...]'
-npm exec --package=foo -c '&lt;cmd&gt; [args...]'
-
-npx &lt;pkg&gt;[@&lt;specifier&gt;] [args...]
-npx -p &lt;pkg&gt;[@&lt;specifier&gt;] &lt;cmd&gt; [args...]
+<pre><code class="language-bash">npx -- &lt;pkg&gt;[@&lt;version&gt;] [args...]
+npx --package=&lt;pkg&gt;[@&lt;version&gt;] -- &lt;cmd&gt; [args...]
 npx -c '&lt;cmd&gt; [args...]'
-npx -p &lt;pkg&gt;[@&lt;specifier&gt;] -c '&lt;cmd&gt; [args...]'
-
-alias: npm x, npx
-
---package=&lt;pkg&gt; (may be specified multiple times)
--p is a shorthand for --package only when using npx executable
--c &lt;cmd&gt; --call=&lt;cmd&gt; (may not be mixed with positional arguments)
+npx --package=foo -c '&lt;cmd&gt; [args...]'
 </code></pre>
 <h3 id="description">Description</h3>
 <p>This command allows you to run an arbitrary command from an npm package
@@ -278,8 +267,7 @@ in the <code>npx</code> executable for backwards compatibility.</li>
 <li><a href="../commands/npm-stop.html">npm stop</a></li>
 <li><a href="../commands/npm-config.html">npm config</a></li>
 <li><a href="../commands/npm-exec.html">npm exec</a></li>
-</ul>
-</div>
+</ul></div>
 
 <footer id="edit">
 <a href="https://github.com/npm/cli/edit/latest/docs/content/commands/npx.md">

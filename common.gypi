@@ -36,7 +36,7 @@
 
     # Reset this number to 0 on major V8 upgrades.
     # Increment by one for each non-official patch applied to deps/v8.
-    'v8_embedder_string': '-node.13',
+    'v8_embedder_string': '-node.10',
 
     ##### V8 defaults for Node.js #####
 
@@ -137,7 +137,7 @@
         'defines': [ 'DEBUG', '_DEBUG', 'V8_ENABLE_CHECKS' ],
         'cflags': [ '-g', '-O0' ],
         'conditions': [
-          ['OS=="aix"', {
+          ['OS in "aix os400"', {
             'cflags': [ '-gxcoff' ],
             'ldflags': [ '-Wl,-bbigtoc' ],
           }],
@@ -212,6 +212,9 @@
             'cflags': [ '-qINLINE=::150:100000' ]
           }],
           ['OS!="mac" and OS!="win" and OS!="zos"', {
+            # -fno-omit-frame-pointer is necessary for the --perf_basic_prof
+            # flag to work correctly. perf(1) gets confused about JS stack
+            # frames otherwise, even with --call-graph dwarf.
             'cflags': [ '-fno-omit-frame-pointer' ],
           }],
           ['OS=="linux"', {
@@ -390,11 +393,11 @@
           'BUILDING_UV_SHARED=1',
         ],
       }],
-      [ 'OS in "linux freebsd openbsd solaris aix"', {
+      [ 'OS in "linux freebsd openbsd solaris aix os400"', {
         'cflags': [ '-pthread' ],
         'ldflags': [ '-pthread' ],
       }],
-      [ 'OS in "linux freebsd openbsd solaris android aix cloudabi"', {
+      [ 'OS in "linux freebsd openbsd solaris android aix os400 cloudabi"', {
         'cflags': [ '-Wall', '-Wextra', '-Wno-unused-parameter', ],
         'cflags_cc': [ '-fno-rtti', '-fno-exceptions', '-std=gnu++17' ],
         'defines': [ '__STDC_FORMAT_MACROS' ],
@@ -418,11 +421,11 @@
             'cflags': [ '-m64' ],
             'ldflags': [ '-m64' ],
           }],
-          [ 'target_arch=="ppc" and OS!="aix"', {
+          [ 'target_arch=="ppc" and OS not in "aix os400"', {
             'cflags': [ '-m32' ],
             'ldflags': [ '-m32' ],
           }],
-          [ 'target_arch=="ppc64" and OS!="aix"', {
+          [ 'target_arch=="ppc64" and OS not in "aix os400"', {
             'cflags': [ '-m64', '-mminimal-toc' ],
             'ldflags': [ '-m64' ],
           }],
@@ -441,7 +444,7 @@
           }],
         ],
       }],
-      [ 'OS=="aix"', {
+      [ 'OS in "aix os400"', {
         'variables': {
           # Used to differentiate `AIX` and `OS400`(IBM i).
           'aix_variant_name': '<!(uname -s)',
@@ -497,7 +500,7 @@
           'GCC_ENABLE_CPP_RTTI': 'NO',              # -fno-rtti
           'GCC_ENABLE_PASCAL_STRINGS': 'NO',        # No -mpascal-strings
           'PREBINDING': 'NO',                       # No -Wl,-prebind
-          'MACOSX_DEPLOYMENT_TARGET': '10.13',      # -mmacosx-version-min=10.13
+          'MACOSX_DEPLOYMENT_TARGET': '10.15',      # -mmacosx-version-min=10.15
           'USE_HEADERMAP': 'NO',
           'OTHER_CFLAGS': [
             '-fno-strict-aliasing',
@@ -541,9 +544,6 @@
             },
           }],
         ],
-      }],
-      ['OS=="freebsd" and node_use_dtrace=="true"', {
-        'libraries': [ '-lelf' ],
       }],
       ['OS=="freebsd"', {
         'ldflags': [

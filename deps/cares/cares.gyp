@@ -9,7 +9,7 @@
           '_GNU_SOURCE'
         ]
       }],
-      [ 'OS=="aix"', {
+      [ 'OS in "aix os400"', {
         'include_dirs': [ 'config/aix' ],
         'sources': [ 'config/aix/ares_config.h' ],
         'defines': [
@@ -157,7 +157,7 @@
           'include_dirs': [ 'config/linux' ],
           'sources': [ 'config/linux/ares_config.h' ]
         }],
-        [ 'OS=="mac"', {
+        [ 'OS=="mac" or OS=="ios"', {
           'include_dirs': [ 'config/darwin' ],
           'sources': [ 'config/darwin/ares_config.h' ]
         }],

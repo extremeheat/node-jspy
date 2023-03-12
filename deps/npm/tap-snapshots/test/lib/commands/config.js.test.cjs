@@ -20,7 +20,7 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "also": null,
   "audit": true,
   "audit-level": null,
-  "auth-type": "legacy",
+  "auth-type": "web",
   "before": null,
   "bin-links": true,
   "browser": null,
@@ -60,8 +60,8 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "git": "git",
   "git-tag-version": true,
   "global": false,
-  "global-style": false,
   "globalconfig": "{GLOBALPREFIX}/npmrc",
+  "global-style": false,
   "heading": "npm",
   "https-proxy": null,
   "if-present": false,
@@ -81,6 +81,8 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "init.license": "ISC",
   "init.module": "{HOME}/.npm-init.js",
   "init.version": "1.0.0",
+  "install-links": false,
+  "install-strategy": "hoisted",
   "key": null,
   "legacy-bundling": false,
   "legacy-peer-deps": false,
@@ -89,18 +91,18 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "location": "user",
   "lockfile-version": null,
   "loglevel": "notice",
+  "logs-dir": null,
   "logs-max": 10,
   "long": false,
   "maxsockets": 15,
   "message": "%s",
   "node-options": null,
-  "node-version": "{NODE-VERSION}",
   "noproxy": [
     ""
   ],
-  "npm-version": "{NPM-VERSION}",
   "offline": false,
   "omit": [],
+  "omit-lockfile-registry-resolved": false,
   "only": null,
   "optional": null,
   "otp": null,
@@ -114,10 +116,12 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "preid": "",
   "production": null,
   "progress": true,
+  "provenance": false,
   "proxy": null,
   "read-only": false,
   "rebuild-bundle": true,
   "registry": "https://registry.npmjs.org/",
+  "replace-registry-host": "npmjs",
   "save": true,
   "save-bundle": false,
   "save-dev": false,
@@ -136,8 +140,6 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "shrinkwrap": true,
   "sign-git-commit": false,
   "sign-git-tag": false,
-  "sso-poll-frequency": 500,
-  "sso-type": "oauth",
   "strict-peer-deps": false,
   "strict-ssl": true,
   "tag": "latest",
@@ -155,6 +157,7 @@ exports[`test/lib/commands/config.js TAP config list --json > output matches sna
   "which": null,
   "workspace": [],
   "workspaces": null,
+  "workspaces-update": true,
   "yes": null,
   "metrics-registry": "https://registry.npmjs.org/"
 }
@@ -170,7 +173,7 @@ allow-same-version = false
 also = null
 audit = true
 audit-level = null
-auth-type = "legacy"
+auth-type = "web"
 before = null
 bin-links = true
 browser = null
@@ -232,6 +235,8 @@ init.author.url = ""
 init.license = "ISC"
 init.module = "{HOME}/.npm-init.js"
 init.version = "1.0.0"
+install-links = false
+install-strategy = "hoisted"
 json = false
 key = null
 legacy-bundling = false
@@ -241,17 +246,17 @@ local-address = null
 location = "user"
 lockfile-version = null
 loglevel = "notice"
+logs-dir = null
 logs-max = 10
 ; long = false ; overridden by cli
 maxsockets = 15
 message = "%s"
 metrics-registry = "https://registry.npmjs.org/"
 node-options = null
-node-version = "{NODE-VERSION}"
 noproxy = [""]
-npm-version = "{NPM-VERSION}"
 offline = false
 omit = []
+omit-lockfile-registry-resolved = false
 only = null
 optional = null
 otp = null
@@ -266,10 +271,12 @@ prefer-online = false
 preid = ""
 production = null
 progress = true
+provenance = false
 proxy = null
 read-only = false
 rebuild-bundle = true
 registry = "https://registry.npmjs.org/"
+replace-registry-host = "npmjs"
 save = true
 save-bundle = false
 save-dev = false
@@ -288,8 +295,6 @@ shell = "{SHELL}"
 shrinkwrap = true
 sign-git-commit = false
 sign-git-tag = false
-sso-poll-frequency = 500
-sso-type = "oauth"
 strict-peer-deps = false
 strict-ssl = true
 tag = "latest"
@@ -308,6 +313,7 @@ viewer = "{VIEWER}"
 which = null
 workspace = []
 workspaces = null
+workspaces-update = true
 yes = null
 
 ; "global" config from {GLOBALPREFIX}/npmrc
@@ -338,6 +344,9 @@ prefix = "{LOCALPREFIX}"
 userconfig = "{HOME}/.npmrc"
 
 ; node bin location = {EXECPATH}
+; node version = {NODE-VERSION}
+; npm local prefix = {LOCALPREFIX}
+; npm version = {NPM-VERSION}
 ; cwd = {NPMDIR}
 ; HOME = {HOME}
 ; Run \`npm config ls -l\` to show all defaults.
@@ -351,6 +360,9 @@ prefix = "{LOCALPREFIX}"
 userconfig = "{HOME}/.npmrc"
 
 ; node bin location = {EXECPATH}
+; node version = {NODE-VERSION}
+; npm local prefix = {LOCALPREFIX}
+; npm version = {NPM-VERSION}
 ; cwd = {NPMDIR}
 ; HOME = {HOME}
 ; Run \`npm config ls -l\` to show all defaults.
@@ -379,6 +391,9 @@ prefix = "{LOCALPREFIX}"
 userconfig = "{HOME}/.npmrc"
 
 ; node bin location = {EXECPATH}
+; node version = {NODE-VERSION}
+; npm local prefix = {LOCALPREFIX}
+; npm version = {NPM-VERSION}
 ; cwd = {NPMDIR}
 ; HOME = {HOME}
 ; Run \`npm config ls -l\` to show all defaults.

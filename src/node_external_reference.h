@@ -10,7 +10,15 @@
 
 namespace node {
 
+using CFunctionCallbackWithOneByteString =
+    uint32_t (*)(v8::Local<v8::Value>, const v8::FastOneByteString&);
 using CFunctionCallback = void (*)(v8::Local<v8::Value> receiver);
+using CFunctionCallbackReturnDouble =
+    double (*)(v8::Local<v8::Object> receiver);
+using CFunctionCallbackWithInt64 = void (*)(v8::Local<v8::Object> receiver,
+                                            int64_t);
+using CFunctionCallbackWithBool = void (*)(v8::Local<v8::Object> receiver,
+                                           bool);
 
 // This class manages the external references from the V8 heap
 // to the C++ addresses in Node.js.
@@ -20,6 +28,10 @@ class ExternalReferenceRegistry {
 
 #define ALLOWED_EXTERNAL_REFERENCE_TYPES(V)                                    \
   V(CFunctionCallback)                                                         \
+  V(CFunctionCallbackWithOneByteString)                                        \
+  V(CFunctionCallbackReturnDouble)                                             \
+  V(CFunctionCallbackWithInt64)                                                \
+  V(CFunctionCallbackWithBool)                                                 \
   V(const v8::CFunctionInfo*)                                                  \
   V(v8::FunctionCallback)                                                      \
   V(v8::AccessorGetterCallback)                                                \
@@ -30,7 +42,12 @@ class ExternalReferenceRegistry {
   V(v8::GenericNamedPropertyDeleterCallback)                                   \
   V(v8::GenericNamedPropertyEnumeratorCallback)                                \
   V(v8::GenericNamedPropertyQueryCallback)                                     \
-  V(v8::GenericNamedPropertySetterCallback)
+  V(v8::GenericNamedPropertySetterCallback)                                    \
+  V(v8::IndexedPropertySetterCallback)                                         \
+  V(v8::IndexedPropertyDefinerCallback)                                        \
+  V(v8::IndexedPropertyDeleterCallback)                                        \
+  V(v8::IndexedPropertyQueryCallback)                                          \
+  V(v8::IndexedPropertyDescriptorCallback)
 
 #define V(ExternalReferenceType)                                               \
   void Register(ExternalReferenceType addr) { RegisterT(addr); }
@@ -56,8 +73,11 @@ class ExternalReferenceRegistry {
   V(binding)                                                                   \
   V(blob)                                                                      \
   V(buffer)                                                                    \
+  V(builtins)                                                                  \
+  V(cares_wrap)                                                                \
   V(contextify)                                                                \
   V(credentials)                                                               \
+  V(encoding_binding)                                                          \
   V(env_var)                                                                   \
   V(errors)                                                                    \
   V(fs)                                                                        \
@@ -66,9 +86,12 @@ class ExternalReferenceRegistry {
   V(handle_wrap)                                                               \
   V(heap_utils)                                                                \
   V(messaging)                                                                 \
-  V(native_module)                                                             \
+  V(mksnapshot)                                                                \
+  V(module_wrap)                                                               \
+  V(options)                                                                   \
   V(os)                                                                        \
   V(performance)                                                               \
+  V(permission)                                                                \
   V(process_methods)                                                           \
   V(process_object)                                                            \
   V(report)                                                                    \
@@ -78,6 +101,7 @@ class ExternalReferenceRegistry {
   V(url)                                                                       \
   V(util)                                                                      \
   V(pipe_wrap)                                                                 \
+  V(sea)                                                                       \
   V(serdes)                                                                    \
   V(string_decoder)                                                            \
   V(stream_wrap)                                                               \
@@ -88,6 +112,7 @@ class ExternalReferenceRegistry {
   V(uv)                                                                        \
   V(v8)                                                                        \
   V(zlib)                                                                      \
+  V(wasm_web_api)                                                              \
   V(worker)
 
 #if NODE_HAVE_I18N_SUPPORT
@@ -104,12 +129,6 @@ class ExternalReferenceRegistry {
 #define EXTERNAL_REFERENCE_BINDING_LIST_INSPECTOR(V)
 #endif  // HAVE_INSPECTOR
 
-#if HAVE_DTRACE || HAVE_ETW
-#define EXTERNAL_REFERENCE_BINDING_LIST_DTRACE(V) V(dtrace)
-#else
-#define EXTERNAL_REFERENCE_BINDING_LIST_DTRACE(V)
-#endif
-
 #if HAVE_OPENSSL
 #define EXTERNAL_REFERENCE_BINDING_LIST_CRYPTO(V) V(crypto) V(tls_wrap)
 #else
@@ -120,20 +139,19 @@ class ExternalReferenceRegistry {
   EXTERNAL_REFERENCE_BINDING_LIST_BASE(V)                                      \
   EXTERNAL_REFERENCE_BINDING_LIST_INSPECTOR(V)                                 \
   EXTERNAL_REFERENCE_BINDING_LIST_I18N(V)                                      \
-  EXTERNAL_REFERENCE_BINDING_LIST_DTRACE(V)                                    \
   EXTERNAL_REFERENCE_BINDING_LIST_CRYPTO(V)
 
 }  // namespace node
 
 // Declare all the external reference registration functions here,
-// and define them later with #NODE_MODULE_EXTERNAL_REFERENCE(modname, func);
+// and define them later with #NODE_BINDING_EXTERNAL_REFERENCE(modname, func);
 #define V(modname)                                                             \
   void _register_external_reference_##modname(                                 \
       node::ExternalReferenceRegistry* registry);
 EXTERNAL_REFERENCE_BINDING_LIST(V)
 #undef V
 
-#define NODE_MODULE_EXTERNAL_REFERENCE(modname, func)                          \
+#define NODE_BINDING_EXTERNAL_REFERENCE(modname, func)                         \
   void _register_external_reference_##modname(                                 \
       node::ExternalReferenceRegistry* registry) {                             \
     func(registry);                                                            \

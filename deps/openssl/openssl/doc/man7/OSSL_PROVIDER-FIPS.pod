@@ -34,7 +34,7 @@ make sure to get implementations of this provider and none other.
 
 The "fips=yes" property can be use to make sure only FIPS approved
 implementations are used for crypto operations.  This may also include
-other non-crypto support operations that are not in the fips provider,
+other non-crypto support operations that are not in the FIPS provider,
 such as asymmetric key encoders,
 see L<OSSL_PROVIDER-default(7)/Asymmetric Key Management>.
 
@@ -88,7 +88,7 @@ The OpenSSL FIPS provider supports these operations and algorithms:
 
 =item TLS13-KDF, see L<EVP_KDF-TLS13_KDF(7)>
 
-=item SSKDF, see L<EVP_KDF-SSKDF(7)>
+=item SSKDF, see L<EVP_KDF-SS(7)>
 
 =item PBKDF2, see L<EVP_KDF-PBKDF2(7)>
 
@@ -96,7 +96,7 @@ The OpenSSL FIPS provider supports these operations and algorithms:
 
 =item TLS1-PRF, see L<EVP_KDF-TLS1_PRF(7)>
 
-=item KBKDF, see L<EVP_KDF-KBKDF(7)>
+=item KBKDF, see L<EVP_KDF-KB(7)>
 
 =item X942KDF-ASN1, see L<EVP_KDF-X942-ASN1(7)>
 
@@ -124,8 +124,6 @@ The OpenSSL FIPS provider supports these operations and algorithms:
 
 =over 4
 
-=item DSA, see L<EVP_KEYEXCH-DSA(7)>
-
 =item RSA, see L<EVP_SIGNATURE-RSA(7)>
 
 =item X25519, see L<EVP_SIGNATURE-ED25519(7)>
@@ -142,7 +140,7 @@ The OpenSSL FIPS provider supports these operations and algorithms:
 
 =over 4
 
-=item RSA, see L<EVP_KEYEXCH-RSA(7)>
+=item RSA, see L<EVP_ASYM_CIPHER-RSA(7)>
 
 =back
 
@@ -160,9 +158,17 @@ The OpenSSL FIPS provider supports these operations and algorithms:
 
 =item DH, see L<EVP_KEYMGMT-DH(7)>
 
+=item DHX, see L<EVP_KEYMGMT-DHX(7)>
+
 =item DSA, see L<EVP_KEYMGMT-DSA(7)>
 
 =item RSA, see L<EVP_KEYMGMT-RSA(7)>
+
+=item EC, see L<EVP_KEYMGMT-EC(7)>
+
+=item X25519, see L<EVP_KEYMGMT-X25519(7)>
+
+=item X448, see L<EVP_KEYMGMT-X448(7)>
 
 =back
 
@@ -399,11 +405,11 @@ L<provider(7)>
 
 =head1 HISTORY
 
-The type and functions described here were added in OpenSSL 3.0.
+This functionality was added in OpenSSL 3.0.
 
 =head1 COPYRIGHT
 
-Copyright 2019-2021 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2019-2022 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

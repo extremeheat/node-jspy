@@ -13,6 +13,7 @@ class Explore extends BaseCommand {
   static name = 'explore'
   static usage = ['<pkg> [ -- <command>]']
   static params = ['shell']
+  static ignoreImplicitWorkspace = false
 
   // TODO
   /* istanbul ignore next */
@@ -58,7 +59,6 @@ class Explore extends BaseCommand {
         pkg,
         banner: false,
         path,
-        stdioString: true,
         event: '_explore',
         stdio: 'inherit',
       }).catch(er => {

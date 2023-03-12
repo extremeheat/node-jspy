@@ -33,6 +33,9 @@ import { visit } from 'unist-util-visit';
 
 import * as common from './common.mjs';
 import * as typeParser from './type-parser.mjs';
+import buildCSSForFlavoredJS from './buildCSSForFlavoredJS.mjs';
+
+const dynamicSizes = { __proto__: null };
 
 const { highlight, getLanguage } = highlightJs;
 
@@ -90,6 +93,8 @@ function processContent(content) {
 }
 
 export function toHTML({ input, content, filename, nodeVersion, versions }) {
+  const dynamicSizesForThisFile = dynamicSizes[filename];
+
   filename = path.basename(filename, '.md');
 
   const id = filename.replace(/\W+/g, '-');
@@ -98,8 +103,11 @@ export function toHTML({ input, content, filename, nodeVersion, versions }) {
                      .replace(/__FILENAME__/g, filename)
                      .replace('__SECTION__', content.section)
                      .replace(/__VERSION__/g, nodeVersion)
-                     .replace('__TOC__', content.toc)
-                     .replace('__GTOC__', gtocHTML.replace(
+                     .replace(/__TOC__/g, content.toc)
+                     .replace('__JS_FLAVORED_DYNAMIC_CSS__', buildCSSForFlavoredJS(dynamicSizesForThisFile))
+                     .replace(/__TOC_PICKER__/g, tocPicker(id, content))
+                     .replace(/__GTOC_PICKER__/g, gtocPicker(id))
+                     .replace(/__GTOC__/g, gtocHTML.replace(
                        `class="nav-${id}"`, `class="nav-${id} active"`))
                      .replace('__EDIT_ON_GITHUB__', editOnGitHub(filename))
                      .replace('__CONTENT__', processContent(content));
@@ -212,7 +220,7 @@ export function preprocessElements({ filename }) {
       } else if (node.type === 'code') {
         if (!node.lang) {
           console.warn(
-            `No language set in ${filename}, line ${node.position.start.line}`
+            `No language set in ${filename}, line ${node.position.start.line}`,
           );
         }
         const className = isJSFlavorSnippet(node) ?
@@ -226,14 +234,19 @@ export function preprocessElements({ filename }) {
           const previousNode = parent.children[index - 1] || {};
           const nextNode = parent.children[index + 1] || {};
 
+          const charCountFirstTwoLines = Math.max(...node.value.split('\n', 2).map((str) => str.length));
+
           if (!isJSFlavorSnippet(previousNode) &&
               isJSFlavorSnippet(nextNode) &&
               nextNode.lang !== node.lang) {
             // Saving the highlight code as value to be added in the next node.
             node.value = highlighted;
+            node.charCountFirstTwoLines = charCountFirstTwoLines;
           } else if (isJSFlavorSnippet(previousNode) &&
                      previousNode.lang !== node.lang) {
-            node.value = '<pre>' +
+            const actualCharCount = Math.max(charCountFirstTwoLines, previousNode.charCountFirstTwoLines);
+            (dynamicSizes[filename] ??= new Set()).add(actualCharCount);
+            node.value = `<pre class="with-${actualCharCount}-chars">` +
               '<input class="js-flavor-selector" type="checkbox"' +
               // If CJS comes in second, ESM should display by default.
               (node.lang === 'cjs' ? ' checked' : '') +
@@ -289,7 +302,7 @@ export function preprocessElements({ filename }) {
               (noLinking ? '' :
                 '<a href="documentation.html#stability-index">') +
               `${prefix} ${number}${noLinking ? '' : '</a>'}`
-                .replace(/\n/g, ' ')
+                .replace(/\n/g, ' '),
           });
 
           // Remove prefix and number from text
@@ -312,27 +325,27 @@ function parseYAML(text) {
   const removed = { description: '' };
 
   if (meta.added) {
-    added.version = meta.added.join(', ');
-    added.description = `<span>Added in: ${added.version}</span>`;
+    added.version = meta.added;
+    added.description = `<span>Added in: ${added.version.join(', ')}</span>`;
   }
 
   if (meta.deprecated) {
-    deprecated.version = meta.deprecated.join(', ');
+    deprecated.version = meta.deprecated;
     deprecated.description =
-        `<span>Deprecated since: ${deprecated.version}</span>`;
+        `<span>Deprecated since: ${deprecated.version.join(', ')}</span>`;
   }
 
   if (meta.removed) {
-    removed.version = meta.removed.join(', ');
-    removed.description = `<span>Removed in: ${removed.version}</span>`;
+    removed.version = meta.removed;
+    removed.description = `<span>Removed in: ${removed.version.join(', ')}</span>`;
   }
 
   if (meta.changes.length > 0) {
-    if (added.description) meta.changes.push(added);
     if (deprecated.description) meta.changes.push(deprecated);
     if (removed.description) meta.changes.push(removed);
 
     meta.changes.sort((a, b) => versionSort(a.version, b.version));
+    if (added.description) meta.changes.push(added);
 
     result += '<details class="changelog"><summary>History</summary>\n' +
             '<table>\n<tr><th>Version</th><th>Changes</th></tr>\n';
@@ -385,8 +398,8 @@ function versionSort(a, b) {
 const DEPRECATION_HEADING_PATTERN = /^DEP\d+:/;
 export function buildToc({ filename, apilinks }) {
   return (tree, file) => {
-    const idCounters = Object.create(null);
-    const legacyIdCounters = Object.create(null);
+    const idCounters = { __proto__: null };
+    const legacyIdCounters = { __proto__: null };
     let toc = '';
     let depth = 0;
 
@@ -395,7 +408,7 @@ export function buildToc({ filename, apilinks }) {
 
       if (node.depth - depth > 1) {
         throw new Error(
-          `Inappropriate heading level:\n${JSON.stringify(node)}`
+          `Inappropriate heading level:\n${JSON.stringify(node)}`,
         );
       }
 
@@ -442,17 +455,18 @@ export function buildToc({ filename, apilinks }) {
     });
 
     if (toc !== '') {
-      file.toc = '<details id="toc" open><summary>Table of contents</summary>' +
-        unified()
-          .use(markdown)
-          .use(gfm)
-          .use(remark2rehype, { allowDangerousHtml: true })
-          .use(raw)
-          .use(htmlStringify)
-          .processSync(toc).toString() +
-        '</details>';
+      const inner = unified()
+        .use(markdown)
+        .use(gfm)
+        .use(remark2rehype, { allowDangerousHtml: true })
+        .use(raw)
+        .use(htmlStringify)
+        .processSync(toc).toString();
+
+      file.toc = `<details id="toc" open><summary>Table of contents</summary>${inner}</details>`;
+      file.tocPicker = `<div class="toc">${inner}</div>`;
     } else {
-      file.toc = '<!-- TOC -->';
+      file.toc = file.tocPicker = '<!-- TOC -->';
     }
   };
 }
@@ -508,13 +522,60 @@ function altDocs(filename, docCreated, versions) {
   const list = versions.filter(isDocInVersion).map(wrapInListItem).join('\n');
 
   return list ? `
-    <li class="version-picker">
-      <a href="#">View another version <span>&#x25bc;</span></a>
-      <ol class="version-picker">${list}</ol>
+    <li class="picker-header">
+      <a href="#">
+        <span class="collapsed-arrow">&#x25ba;</span><span class="expanded-arrow">&#x25bc;</span>
+        Other versions
+      </a>
+      <div class="picker"><ol id="alt-docs">${list}</ol></div>
     </li>
   ` : '';
 }
 
 function editOnGitHub(filename) {
-  return `<li class="edit_on_github"><a href="https://github.com/nodejs/node/edit/master/doc/api/${filename}.md">Edit on GitHub</a></li>`;
+  return `<li class="edit_on_github"><a href="https://github.com/nodejs/node/edit/main/doc/api/${filename}.md">Edit on GitHub</a></li>`;
+}
+
+function gtocPicker(id) {
+  if (id === 'index') {
+    return '';
+  }
+
+  // Highlight the current module and add a link to the index
+  const gtoc = gtocHTML.replace(
+    `class="nav-${id}"`, `class="nav-${id} active"`,
+  ).replace('</ul>', `
+      <li>
+        <a href="index.html">Index</a>
+      </li>
+    </ul>
+  `);
+
+  return `
+    <li class="picker-header">
+      <a href="#">
+        <span class="collapsed-arrow">&#x25ba;</span><span class="expanded-arrow">&#x25bc;</span>
+        Index
+      </a>
+
+      <div class="picker">${gtoc}</div>
+    </li>
+  `;
+}
+
+function tocPicker(id, content) {
+  if (id === 'index') {
+    return '';
+  }
+
+  return `
+    <li class="picker-header">
+      <a href="#">
+        <span class="collapsed-arrow">&#x25ba;</span><span class="expanded-arrow">&#x25bc;</span>
+        Table of contents
+      </a>
+
+      <div class="picker">${content.tocPicker}</div>
+    </li>
+  `;
 }

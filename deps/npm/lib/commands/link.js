@@ -7,7 +7,6 @@ const Arborist = require('@npmcli/arborist')
 const npa = require('npm-package-arg')
 const rpj = require('read-package-json-fast')
 const semver = require('semver')
-const log = require('../utils/log-shim.js')
 
 const reifyFinish = require('../utils/reify-finish.js')
 
@@ -16,16 +15,16 @@ class Link extends ArboristWorkspaceCmd {
   static description = 'Symlink a package folder'
   static name = 'link'
   static usage = [
-    '(in package dir)',
-    '[<@scope>/]<pkg>[@<version>]',
+    '[<package-spec>]',
   ]
 
   static params = [
     'save',
     'save-exact',
     'global',
-    'global-style',
+    'install-strategy',
     'legacy-bundling',
+    'global-style',
     'strict-peer-deps',
     'package-lock',
     'omit',
@@ -44,7 +43,7 @@ class Link extends ArboristWorkspaceCmd {
   }
 
   async exec (args) {
-    if (this.npm.config.get('global')) {
+    if (this.npm.global) {
       throw Object.assign(
         new Error(
           'link should never be --global.\n' +
@@ -53,6 +52,8 @@ class Link extends ArboristWorkspaceCmd {
         { code: 'ELINKGLOBAL' }
       )
     }
+    // install-links is implicitly false when running `npm link`
+    this.npm.config.set('install-links', false)
 
     // link with no args: symlink the folder to the global location
     // link with package arg: symlink the global to the local
@@ -69,7 +70,6 @@ class Link extends ArboristWorkspaceCmd {
     const globalOpts = {
       ...this.npm.flatOptions,
       path: globalTop,
-      log,
       global: true,
       prune: false,
     }
@@ -118,7 +118,6 @@ class Link extends ArboristWorkspaceCmd {
     const localArb = new Arborist({
       ...this.npm.flatOptions,
       prune: false,
-      log,
       path: this.npm.prefix,
       save,
     })
@@ -126,8 +125,7 @@ class Link extends ArboristWorkspaceCmd {
       ...this.npm.flatOptions,
       prune: false,
       path: this.npm.prefix,
-      log,
-      add: names.map(l => `file:${resolve(globalTop, 'node_modules', l)}`),
+      add: names.map(l => `file:${resolve(globalTop, 'node_modules', l).replace(/#/g, '%23')}`),
       save,
       workspaces: this.workspaceNames,
     })
@@ -138,17 +136,15 @@ class Link extends ArboristWorkspaceCmd {
   async linkPkg () {
     const wsp = this.workspacePaths
     const paths = wsp && wsp.length ? wsp : [this.npm.prefix]
-    const add = paths.map(path => `file:${path}`)
+    const add = paths.map(path => `file:${path.replace(/#/g, '%23')}`)
     const globalTop = resolve(this.npm.globalDir, '..')
     const arb = new Arborist({
       ...this.npm.flatOptions,
       path: globalTop,
-      log,
       global: true,
     })
     await arb.reify({
       add,
-      log,
     })
     await reifyFinish(this.npm, arb)
   }

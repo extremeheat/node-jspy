@@ -10,6 +10,7 @@ const {
 const {
   deepStrictEqual,
   strictEqual,
+  throws,
 } = require('assert');
 
 const {
@@ -40,7 +41,7 @@ function makeHook(trackedTypes) {
 
     before(asyncId) { log(asyncId, 'before'); },
     after(asyncId) { log(asyncId, 'after'); },
-    destroy(asyncId) { log(asyncId, 'destroy'); }
+    destroy(asyncId) { log(asyncId, 'destroy'); },
   }).enable();
 
   return {
@@ -50,7 +51,7 @@ function makeHook(trackedTypes) {
     },
     ids() {
       return new Set(eventMap.keys());
-    }
+    },
   };
 }
 
@@ -130,3 +131,26 @@ function makeHook(trackedTypes) {
     ],
   ]));
 })().then(common.mustCall());
+
+// Member methods ERR_INVALID_THIS
+throws(
+  () => EventEmitterAsyncResource.prototype.emit(),
+  { code: 'ERR_INVALID_THIS' }
+);
+
+throws(
+  () => EventEmitterAsyncResource.prototype.emitDestroy(),
+  { code: 'ERR_INVALID_THIS' }
+);
+
+['asyncId', 'triggerAsyncId', 'asyncResource'].forEach((getter) => {
+  throws(
+    () => Reflect.get(EventEmitterAsyncResource.prototype, getter, {}),
+    {
+      code: 'ERR_INVALID_THIS',
+      name: /TypeError/,
+      message: 'Value of "this" must be of type EventEmitterAsyncResource',
+      stack: new RegExp(`at get ${getter}`),
+    }
+  );
+});

@@ -11,54 +11,48 @@ specification. WASI gives sandboxed WebAssembly applications access to the
 underlying operating system via a collection of POSIX-like functions.
 
 ```mjs
-import { readFile } from 'fs/promises';
+import { readFile } from 'node:fs/promises';
 import { WASI } from 'wasi';
-import { argv, env } from 'process';
+import { argv, env } from 'node:process';
 
 const wasi = new WASI({
+  version: 'preview1',
   args: argv,
   env,
   preopens: {
-    '/sandbox': '/some/real/path/that/wasm/can/access'
-  }
+    '/sandbox': '/some/real/path/that/wasm/can/access',
+  },
 });
 
-// Some WASI binaries require:
-//   const importObject = { wasi_unstable: wasi.wasiImport };
-const importObject = { wasi_snapshot_preview1: wasi.wasiImport };
-
 const wasm = await WebAssembly.compile(
-  await readFile(new URL('./demo.wasm', import.meta.url))
+  await readFile(new URL('./demo.wasm', import.meta.url)),
 );
-const instance = await WebAssembly.instantiate(wasm, importObject);
+const instance = await WebAssembly.instantiate(wasm, wasi.getImportObject());
 
 wasi.start(instance);
 ```
 
 ```cjs
 'use strict';
-const { readFile } = require('fs/promises');
+const { readFile } = require('node:fs/promises');
 const { WASI } = require('wasi');
-const { argv, env } = require('process');
-const { join } = require('path');
+const { argv, env } = require('node:process');
+const { join } = require('node:path');
 
 const wasi = new WASI({
+  version: 'preview1',
   args: argv,
   env,
   preopens: {
-    '/sandbox': '/some/real/path/that/wasm/can/access'
-  }
+    '/sandbox': '/some/real/path/that/wasm/can/access',
+  },
 });
-
-// Some WASI binaries require:
-//   const importObject = { wasi_unstable: wasi.wasiImport };
-const importObject = { wasi_snapshot_preview1: wasi.wasiImport };
 
 (async () => {
   const wasm = await WebAssembly.compile(
-    await readFile(join(__dirname, 'demo.wasm'))
+    await readFile(join(__dirname, 'demo.wasm')),
   );
-  const instance = await WebAssembly.instantiate(wasm, importObject);
+  const instance = await WebAssembly.instantiate(wasm, wasi.getImportObject());
 
   wasi.start(instance);
 })();
@@ -126,6 +120,10 @@ sandbox directory structure configured explicitly.
 added:
  - v13.3.0
  - v12.16.0
+changes:
+ - version: REPLACEME
+   pr-url: https://github.com/nodejs/node/pull/46469
+   description: version field added to options.
 -->
 
 * `options` {Object}
@@ -148,6 +146,30 @@ added:
     WebAssembly application. **Default:** `1`.
   * `stderr` {integer} The file descriptor used as standard error in the
     WebAssembly application. **Default:** `2`.
+  * `version` {string} The version of WASI requested. Currently the only
+    supported versions are `unstable` and `preview1`. **Default:** `preview1`.
+
+### `wasi.getImportObject()`
+
+<!-- YAML
+added: REPLACEME
+-->
+
+Return an import object that can be passed to `WebAssembly.instantiate()` if
+no other WASM imports are needed beyond those provided by WASI.
+
+If version `unstable` was passed into the constructor it will return:
+
+```json
+{ wasi_unstable: wasi.wasiImport }
+```
+
+If version `preview1` was passed into the constructor or no version was
+specified it will return:
+
+```json
+{ wasi_snapshot_preview1: wasi.wasiImport }
+```
 
 ### `wasi.start(instance)`
 

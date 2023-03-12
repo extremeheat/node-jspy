@@ -102,16 +102,20 @@ tmpdir.refresh();
   assert.strictEqual(content, 'hello world!');
 }
 
-// Test writeFileSync with an object with an own toString function
+// Test writeFileSync with an invalid input
 {
-  const file = path.join(tmpdir.path, 'testWriteFileSyncStringify.txt');
-  const data = {
-    toString() {
-      return 'hello world!';
-    }
-  };
-
-  fs.writeFileSync(file, data, { encoding: 'utf8', flag: 'a' });
-  const content = fs.readFileSync(file, { encoding: 'utf8' });
-  assert.strictEqual(content, String(data));
+  const file = path.join(tmpdir.path, 'testWriteFileSyncInvalid.txt');
+  for (const data of [
+    false, 5, {}, [], null, undefined, true, 5n, () => {}, Symbol(), new Map(),
+    new String('notPrimitive'),
+    { [Symbol.toPrimitive]: (hint) => 'amObject' },
+    { toString() { return 'amObject'; } },
+    Promise.resolve('amPromise'),
+    common.mustNotCall(),
+  ]) {
+    assert.throws(
+      () => fs.writeFileSync(file, data, { encoding: 'utf8', flag: 'a' }),
+      { code: 'ERR_INVALID_ARG_TYPE' }
+    );
+  }
 }

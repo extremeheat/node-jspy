@@ -2,6 +2,7 @@
 #include "env-inl.h"
 #include "node.h"
 #include "node_snapshot_builder.h"
+#include "jspy_spinner.h"
 
 using v8::Context;
 using v8::Function;

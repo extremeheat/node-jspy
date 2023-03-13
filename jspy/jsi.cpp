@@ -7,7 +7,7 @@ JSInterfaceForPython::Result JSInterfaceForPython::call(
   v8::Locker locker(nodeEnv->isolate());
   // Create a handle scope to keep the temporary object references.
   v8::HandleScope handle_scope(nodeEnv->isolate());
-
+  v8::Isolate::Scope isolate_scope(nodeEnv->isolate());
   v8::Local<v8::Context> context =
       v8::Local<v8::Context>::New(nodeEnv->isolate(), nodeEnv->context());
 
@@ -119,17 +119,12 @@ JSInterfaceForPython::Result JSInterfaceForPython::call(
       return {Empty};
     }
     if (value->IsFunction()) {
-      v8::Local<v8::Function> val = v8::Local<v8::Function>::Cast(value);
-      // val->This
       printf("Called method is a function\n");
-    } else if (value->IsObject()) {
-      printf("Called method is a object\n");
+      auto val = value.As<v8::Function>();
       // Convert to a v8::Persistent
-      v8::Local<v8::Object> val = v8::Local<v8::Object>::Cast(value);
-      v8::Persistent<v8::Object> p(nodeEnv->isolate(), val);
+      v8::Persistent<v8::Function> p(nodeEnv->isolate(), val);
       // Store the persistent in the map
-      int ffid = this->ffidCounter++;
-      this->m[ffid] = p;
+      int newFfid = this->AddPersistentFn(p);
 
       // Get the name of the object's constructor, so we don't have to write a
       // generic "Proxy" in python
@@ -137,7 +132,23 @@ JSInterfaceForPython::Result JSInterfaceForPython::call(
       v8::String::Utf8Value utf8(nodeEnv->isolate(), constructorName);
       std::string strName = *utf8;
 
-      return {ResultType::Object, 0, 0, ffid, strName};
+      return {ResultType::Object, 0, 0, newFfid, strName};
+    } else if (value->IsObject()) {
+      printf("Called method is a object\n");
+      auto val = value.As<v8::Object>();
+
+      // Convert to a v8::Persistent
+      v8::Persistent<v8::Value> p(nodeEnv->isolate(), val);
+      // Store the persistent in the map
+      int newFfid = this->AddPersistent(p);
+
+      // Get the name of the object's constructor, so we don't have to write a
+      // generic "Proxy" in python
+      auto constructorName = val->GetConstructorName();
+      v8::String::Utf8Value utf8(nodeEnv->isolate(), constructorName);
+      std::string strName = *utf8;
+
+      return {ResultType::Object, 0, 0, newFfid, strName};
     } else if (value->IsString()) {
       printf("Called method is a string\n");
       v8::Local<v8::String> val = v8::Local<v8::String>::Cast(value);
@@ -229,12 +240,18 @@ Result JSInterfaceForPython::get(int ffid, std::string attribute) {
 Result JSInterfaceForPython::inspect(int ffid) {
   v8::Locker locker(nodeEnv->isolate());
   v8::HandleScope handle_scope(nodeEnv->isolate());
+  v8::Isolate::Scope isolate_scope(nodeEnv->isolate());
   v8::Local<v8::Context> context =
       v8::Local<v8::Context>::New(nodeEnv->isolate(), nodeEnv->context());
   v8::Context::Scope context_scope(context);
 
   PersistentValue v = this->GetPersistent(ffid);  // THROWS
-  auto local = v8::Local<v8::Value>::New(nodeEnv->isolate(), v);
+  auto local =
+      v8::Local<v8::Value>::New(nodeEnv->isolate(), v).As<v8::Object>();
+
+  auto constructorName = local.As<v8::Object>()->GetConstructorName();
+  v8::String::Utf8Value utf8(nodeEnv->isolate(), constructorName);
+  std::string strName = *utf8;
 
   PersistentValue inspectFn = this->GetPersistent(1);  // THROWS
   auto inspectLocal = v8::Local<v8::Value>::New(nodeEnv->isolate(), inspectFn)
@@ -268,7 +285,7 @@ Result JSInterfaceForPython::inspect(int ffid) {
     std::string strVal = *v8::String::Utf8Value(nodeEnv->isolate(), str);
     return {String, 0, 0, 0, strVal};
   }
-  
+
   return {Empty};
 }
 
@@ -301,9 +318,10 @@ void JSInterfaceForPython::loadInspectFunction(
   // Store the inspect function in the map
   v8::Local<v8::Value> inspect = maybeInspect.ToLocalChecked();
   if (inspect->IsFunction()) {
+    auto fn = inspect.As<v8::Function>();
     // store persistent fn
     v8::Persistent<v8::Function> persistent;
-    persistent.Reset(nodeEnv->isolate(), inspect.As<v8::Function>());
+    persistent.Reset(nodeEnv->isolate(), fn);
     this->AddPersistentFn(persistent);
   }
 }

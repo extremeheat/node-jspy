@@ -20,11 +20,10 @@ class JSObject {
  private:
   static PyObject* getAttributeTrap(PyObject* self, char* name) {
     auto obj = (JSProxyObject*)self;
-    printf("TRAP! Called %s (jsi %d, ffid %d)\n", name, obj->jsi, obj->ffid);
+    // printf("TRAP! Called %s (jsi %d, ffid %d)\n", name, obj->jsi, obj->ffid);
 
-#if 0
     auto jsr = obj->jsi->get(obj->ffid, name);
-    printf("JS Res %d\n", jsr.resultType);
+    //printf("JS Res %d\n", jsr.resultType);
 
     switch (jsr.resultType) {
       case JSInterfaceForPython::Integer:
@@ -38,12 +37,12 @@ class JSObject {
       case JSInterfaceForPython::Object:
         return (PyObject*)JSObject::CreateProxy(jsr.ffid, obj->jsi);
     }
-#endif
 
     Py_RETURN_NONE;
   }
 
   static PyObject* callTrap(PyObject* self, PyObject* args, PyObject* kwargs) {
+    printf("CALLING NODE on thread %d\n", std::this_thread::get_id());
     auto obj = (JSProxyObject*)self;
     int nargs = PyTuple_GET_SIZE(args);
     std::vector<JSInterfaceForPython::Argument> jsArgs;
@@ -74,8 +73,7 @@ class JSObject {
       case JSInterfaceForPython::String:
         return PyUnicode_FromString(res.stringValue.c_str());
       case JSInterfaceForPython::Object:
-        auto jsp = (PyObject*)JSObject::CreateProxy(res.ffid, obj->jsi,
-        res.stringValue);
+        auto jsp = (PyObject*)JSObject::CreateProxy(res.ffid, obj->jsi, res.stringValue);
         if (jsp != nullptr) {
           return jsp;
         }

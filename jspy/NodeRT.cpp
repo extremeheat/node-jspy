@@ -63,7 +63,7 @@ bool NodeRT::InitNodeInstance(node::MultiIsolatePlatform* platform,
     // make persistent
     v8::Persistent<v8::Function> persistentFn;
     persistentFn.Reset(setup->isolate(), requireFn);
-    this->jsi->SetPersistentGlobalFn(persistentFn, 0);
+    this->jsi->AddPersistentFn(persistentFn);
     this->jsi->loadInspectFunction(requireFn);
   }
 

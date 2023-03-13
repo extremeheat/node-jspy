@@ -15,14 +15,14 @@ JSInterfaceForPython::Result JSInterfaceForPython::call(
   // take place there
   v8::Context::Scope context_scope(context);
 
-  PersistentValue v = m.at(ffid);  // THROWS
+  PersistentValue v = this->GetPersistent(ffid);  // THROWS
   auto local =
       v8::Local<v8::Value>::New(nodeEnv->isolate(), v).As<v8::Function>();
   auto jsArgs = new v8::Local<v8::Value>[argsLen];
   int i = 0;
   for (auto& argument : arguments) {
     if (argument.type == ArgumentType::JSObject) {
-      auto storedArgument = this->m[argument.ffid];
+      auto storedArgument = this->GetPersistent(argument.ffid);
       if (storedArgument.IsEmpty()) {
         return {Error};
       } else {
@@ -168,6 +168,8 @@ JSInterfaceForPython::Result JSInterfaceForPython::call(
       return {ResultType::Empty};
     }
   }
+
+  return {Empty};
 }
 
 /* JSInterfaceForPython::JSInterfaceForPython(NodeEnvironment* nodeEnv)
@@ -182,7 +184,7 @@ Result JSInterfaceForPython::get(int ffid, std::string attribute) {
       v8::Local<v8::Context>::New(nodeEnv->isolate(), nodeEnv->context());
   v8::Context::Scope context_scope(context);
 
-  PersistentValue v = m.at(ffid);  // THROWS
+  PersistentValue v = this->GetPersistent(ffid);  // THROWS
   auto local = v8::Local<v8::Value>::New(nodeEnv->isolate(), v);
 
   if (local->IsObject()) {
@@ -221,7 +223,7 @@ Result JSInterfaceForPython::get(int ffid, std::string attribute) {
     }
   }
 
-  return Result();
+  return {Empty};
 }
 
 Result JSInterfaceForPython::inspect(int ffid) {
@@ -231,10 +233,10 @@ Result JSInterfaceForPython::inspect(int ffid) {
       v8::Local<v8::Context>::New(nodeEnv->isolate(), nodeEnv->context());
   v8::Context::Scope context_scope(context);
 
-  PersistentValue v = m.at(ffid);  // THROWS
+  PersistentValue v = this->GetPersistent(ffid);  // THROWS
   auto local = v8::Local<v8::Value>::New(nodeEnv->isolate(), v);
 
-  PersistentValue inspectFn = m.at(1);  // THROWS
+  PersistentValue inspectFn = this->GetPersistent(1);  // THROWS
   auto inspectLocal = v8::Local<v8::Value>::New(nodeEnv->isolate(), inspectFn)
                           .As<v8::Function>();
 
@@ -254,7 +256,8 @@ Result JSInterfaceForPython::inspect(int ffid) {
       .Check();
 
   v8::Local<v8::Value> args[] = {local, options};
-  auto maybeValue = inspectLocal->Call(context, context->Global(), 2, args);
+  auto maybeValue =
+      inspectLocal->Call(context, v8::Undefined(nodeEnv->isolate()), 2, args);
   if (maybeValue.IsEmpty()) {
     return {Empty};
   }
@@ -297,8 +300,10 @@ void JSInterfaceForPython::loadInspectFunction(
 
   // Store the inspect function in the map
   v8::Local<v8::Value> inspect = maybeInspect.ToLocalChecked();
-  v8::Persistent<v8::Value> persistent;
-  persistent.Reset(nodeEnv->isolate(), inspect);
-  auto ffid = AddPersistent(persistent);
-  m[ffid] = persistent;
+  if (inspect->IsFunction()) {
+    // store persistent fn
+    v8::Persistent<v8::Function> persistent;
+    persistent.Reset(nodeEnv->isolate(), inspect.As<v8::Function>());
+    this->AddPersistentFn(persistent);
+  }
 }

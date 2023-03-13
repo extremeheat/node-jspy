@@ -85,6 +85,17 @@ class JSObject {
     Py_RETURN_NONE;
   }
 
+
+  static PyObject* reprTrap(PyObject* self) {
+    auto obj = (JSProxyObject*)self;
+    auto res = obj->jsi->inspect(obj->ffid);
+
+    if (res.resultType == JSInterfaceForPython::String) {
+      return PyUnicode_FromString(res.stringValue.c_str());
+    }
+    return PyUnicode_FromFormat("<JSProxyObject Trap %d>", obj->ffid);
+  }
+
  public:
   static JSProxyObject* CreateProxy(int ffid,
                                     JSInterfaceForPython* jsi,
@@ -97,6 +108,7 @@ class JSObject {
     // traps
     type.tp_getattr = getAttributeTrap;
     type.tp_call = callTrap;
+    type.tp_repr = reprTrap;
     // type.tp_vectorcall
     //  allocs
     type.tp_new = PyType_GenericNew;

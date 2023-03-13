@@ -119,8 +119,13 @@ public:
   Result inspect(int ffid);
 
   int AddPersistent(v8::Persistent<v8::Value>& fn) {
-    m[++ffidCounter] = fn;
-    return ffidCounter;
+    m[ffidCounter] = fn;
+    return ffidCounter++;
+  };
+
+  int AddPersistentFn(v8::Persistent<v8::Function>& fn) {
+    m[ffidCounter] = fn;
+    return ffidCounter++;
   };
 
   void SetPersistentGlobalFn(v8::Persistent<v8::Function>& fn, int ffid) {
@@ -128,4 +133,8 @@ public:
   };
 
   void loadInspectFunction(v8::Local<v8::Function> &requireFn);
+
+  PersistentValue GetPersistent(int ffid) {
+    return m.at(ffid);
+  };
 };
